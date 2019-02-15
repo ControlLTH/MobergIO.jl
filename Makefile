@@ -3,7 +3,7 @@ CCFLAGS+=-Wall -Werror -I. -g
 LDFLAGS+=-Lbuild/ -lmoberg
 MODULES:=$(wildcard modules/*)
 
-LDFLAGS_parse_config=-ldl moberg_driver.o
+LDFLAGS_parse_config=-ldl -export-dynamic
 
 all: $(LIBRARIES:%=build/%) $(MODULES) test/test_c parse_config
 	echo $(MODULES)
@@ -14,11 +14,11 @@ build/libmoberg.so:	moberg.c Makefile | build
 build:
 	mkdir $@
 
-%:	%.o
-	$(CC) $(LDFLAGS) $(LDFLAGS_$(*)) -o $@  $<
+%:	build/%.o Makefile
+	$(CC) $(LDFLAGS) $(LDFLAGS_$(*)) -o $@  $(filter %.o,$^)
 
-%.o:	%.c
-	$(CC) $(CCFLAGS) -c  $<
+build/%.o:	%.c Makefile
+	$(CC) $(CCFLAGS) -c -o $@ $<
 
 
 .PHONY: $(MODULES)
@@ -40,5 +40,6 @@ clean:
 	rm build/*
 
 
-parse_config: moberg_config_parser.h
-parse_config: moberg_driver.o
+build/parse_config.o: moberg_config_parser.h
+parse_config: build/moberg_driver.o
+parse_config: build/parse_config.o

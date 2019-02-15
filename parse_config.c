@@ -65,6 +65,7 @@ out: ;
 
 static const void nextsym_integer(context_t *c)
 {
+  c->token.kind = tok_INTEGER;
   c->token.u.integer.value = 0;
   while (*c->p && '0' <= *c->p && *c->p <= '9') {
     c->token.u.integer.value *= 10;
@@ -72,6 +73,27 @@ static const void nextsym_integer(context_t *c)
     c->p++;
   }
   printf("INTEGER: %d\n", c->token.u.integer.value);
+}
+
+static const void nextsym_string(context_t *c)
+{
+  printf("STTRING");
+  c->token.kind = tok_STRING;
+  c->p++;
+  c->token.u.string.value = c->p;
+  c->token.u.string.length = 0;
+  while (*c->p && *c->p != '"') {
+    if (*c->p == '\\') {
+      c->token.u.string.length++;
+      c->p++;
+    }
+    if (*c->p) {
+      c->token.u.string.length++;
+      c->p++;
+    }
+  }
+  c->p++;
+  printf("STRING: %.*s\n", c->token.u.string.length, c->token.u.string.value);
 }
 
 static int nextsym(context_t *c)
@@ -124,6 +146,9 @@ static int nextsym(context_t *c)
         c->token.kind = tok_SEMICOLON;
         c->p++;
         break;
+      case '"':
+        nextsym_string(c);
+        break;
       case 'a'...'z':
       case 'A'...'Z':
       case '_':
@@ -138,7 +163,7 @@ static int nextsym(context_t *c)
         break;
     }
   }
-  printf("TOKEN %d\n\n", c->token.kind);
+  printf("TOKEN %d %c\n\n", c->token.kind, c->token.kind<255?c->token.kind:' ');
   if (c->token.kind != tok_none) {
     return 1;
   } else {
@@ -158,6 +183,15 @@ int moberg_config_parser_acceptsym(context_t *c,
     return 1;
   }
   return 0;
+}
+
+int moberg_config_parser_peeksym(context_t *c,
+				 token_t *token)
+{
+  if (token) {
+    *token = c->token;
+  }
+  return *c->p != 0;
 }
 
 static int parse_map_range(context_t *c)
@@ -260,6 +294,7 @@ static int parse_config(context_t *c)
   return 1;
 err:
   printf("Failed!!");
+  exit (1);
   return 0;
 }
 
