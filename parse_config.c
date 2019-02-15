@@ -11,6 +11,7 @@
 #define token moberg_config_parser_token
 #define token_kind moberg_config_parser_token_kind 
 #define acceptsym moberg_config_parser_acceptsym
+#define peeksym moberg_config_parser_peeksym
 
 typedef struct moberg_config_parser_token token_t;
 typedef struct moberg_config_parser_ident ident_t;
@@ -47,20 +48,20 @@ out: ;
     c->token.kind = tok_CONFIG;
   } else if (strncmp("map", v, l) == 0) {
     c->token.kind = tok_MAP;
-  } else if (strncmp("analogin", v, l) == 0) {
+  } else if (strncmp("analog_in", v, l) == 0) {
     c->token.kind = tok_ANALOGIN;
-  } else if (strncmp("analogout", v, l) == 0) {
+  } else if (strncmp("analog_out", v, l) == 0) {
     c->token.kind = tok_ANALOGOUT;
-  } else if (strncmp("digitalin", v, l) == 0) {
+  } else if (strncmp("digital_in", v, l) == 0) {
     c->token.kind = tok_DIGITALIN;
-  } else if (strncmp("digitalout", v, l) == 0) {
+  } else if (strncmp("digital_out", v, l) == 0) {
     c->token.kind = tok_DIGITALOUT;
-  } else if (strncmp("encoderin", v, l) == 0) {
+  } else if (strncmp("encoder_in", v, l) == 0) {
     c->token.kind = tok_ENCODERIN;
   } else {
     c->token.kind = tok_IDENT;
   }
-  printf("IDENT: %.*s\n", l, v);
+  printf("IDENT: %.*s %d\n", l, v, c->token.kind);
 }
 
 static const void nextsym_integer(context_t *c)
@@ -176,12 +177,14 @@ int moberg_config_parser_acceptsym(context_t *c,
                                    token_t *token)
 {
   if (c->token.kind == kind) {
+    printf("ACCEPT %d", c->token.kind);
     if (token) {
       *token = c->token;
     }
     nextsym(c);
     return 1;
   }
+  printf("REJECT %d (%d)", kind, c->token.kind);
   return 0;
 }
 
@@ -214,6 +217,7 @@ err:
 static int parse_map(context_t *c,
                      struct moberg_driver *driver)
 {
+  printf("parsemap");
   struct token t;
   if (acceptsym(c, tok_ANALOGIN, &t) ||
       acceptsym(c, tok_ANALOGOUT, &t) ||
@@ -252,10 +256,15 @@ static int parse_device(context_t *c,
 {
   if (! acceptsym(c, tok_LBRACE, NULL)) { goto err; }
   for (;;) {
+    struct token t;
+    peeksym(c, &t);
+    printf("PEEK %d", t.kind);
     if (acceptsym(c, tok_CONFIG, NULL)) {
       driver->module.parse_config(c);
     } else if (acceptsym(c, tok_MAP, NULL)) {
       parse_map(c, driver);
+    } else if (acceptsym(c, tok_RBRACE, NULL)) {
+      break;
     } else {
       goto err;
     }
@@ -286,6 +295,8 @@ static int parse_config(context_t *c)
 {
   for (;;) {
     struct token t;
+    peeksym(c, &t);
+    printf("PEEK %d", t.kind);
     if (acceptsym(c, tok_IDENT, &t)) {
       printf("DRIVER=%.*s\n", t.u.ident.length, t.u.ident.value);
       if (! parse_driver(c, t.u.ident)) { goto err; }

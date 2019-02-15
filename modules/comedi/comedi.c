@@ -18,15 +18,17 @@ static struct moberg_driver_config parse_config(
   printf("PARSE_CONFIG %s\n", __FILE__);
   printf("LBRACE %d", acceptsym(c, tok_LBRACE, &t));
   for (;;) {
-    if (acceptsym(c, tok_IDENT, &t) ||
-	acceptsym(c, tok_CONFIG, &t)) {
+    if (acceptsym(c, tok_RBRACE, NULL)) {
+	break;
+    } else  if (acceptsym(c, tok_IDENT, &t) ||
+		acceptsym(c, tok_CONFIG, &t)) {
       const char *v = t.u.ident.value;
       int l = t.u.ident.length;
       if (strncmp("device", v, l) == 0) {
 	printf("DEVICE\n");
       } else if (strncmp("modprobe", v, l) == 0) {
 	printf("MODPROBE\n");
-      } else if (strncmp("comedi", v, l) == 0) {
+      } else if (strncmp("config", v, l) == 0) {
 	printf("CONFIG\n");
       }
       acceptsym(c, tok_EQUAL, NULL);
@@ -36,25 +38,31 @@ static struct moberg_driver_config parse_config(
 	printf("%d\n", t.kind);
 	if (t.kind == tok_SEMICOLON) { break; }
       }
-    } else if (acceptsym(c, tok_RBRACE, NULL)) {
-	break;
     } else {
-      goto err;
+	break;
     }
   }
-  return result;
-err:
-  exit(1);
+  printf("PARSE_CONFIG DONE%s\n", __FILE__);
   return result;
 }
 
 static struct moberg_driver_map parse_map(
-  struct moberg_config_parser_context *context,
+  struct moberg_config_parser_context *c,
   enum moberg_config_parser_token_kind kind)
 {
   struct moberg_driver_map result;
 
+  token_t t;
   printf("PARSE_MAP %s\n", __FILE__);
+  if (acceptsym(c, tok_IDENT, &t)) {
+    if (strncmp("subdevice", t.u.ident.value, t.u.ident.length) != 0) {
+      goto err;
+    }
+    if (! acceptsym(c, tok_LBRACKET, NULL)) { goto err; }
+    if (! acceptsym(c, tok_INTEGER, &t)) { goto err; }
+    if (! acceptsym(c, tok_RBRACKET, NULL)) { goto err; }
+  }
+    
 /*
   const char *buf = context->buf;
   while (*buf && *buf != '}') {
@@ -63,6 +71,8 @@ static struct moberg_driver_map parse_map(
   context->buf = buf + 1;
 */
   return result;
+err:
+  exit(1);
 }
 
 struct moberg_driver_module moberg_module = {
