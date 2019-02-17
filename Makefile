@@ -29,7 +29,7 @@ $(MODULES):
 .PHONY: test
 test: all
 	LD_LIBRARY_PATH=build \
-		./parse_config test/*/*.conf
+		valgrind ./parse_config test/*/*.conf
 	LD_LIBRARY_PATH=build HOME=$$(pwd)/test \
 		valgrind -q --error-exitcode=1 test/test_c
 
