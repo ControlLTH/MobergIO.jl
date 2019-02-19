@@ -27,7 +27,6 @@ static inline int acceptkeyword(context_t *c,
 }
  
 #define MAX_EXPECTED 10
-static char expected_char[256][2];
 
 typedef struct moberg_config_parser_context {
   char *buf;      /* Pointer to data to be parsed */
@@ -41,6 +40,7 @@ typedef struct moberg_config_parser_context {
 
 static const void nextsym_ident(context_t *c)
 {
+  c->token.kind = tok_IDENT;
   c->token.u.ident.length = 1;
   c->token.u.ident.value = c->p;
   c->p++;
@@ -54,15 +54,9 @@ static const void nextsym_ident(context_t *c)
         c->token.u.ident.length++;
         break;
       default:
-        goto out;
-        break;
+        return;
     }
   }
-out: ;
-  const char *v = c->token.u.ident.value;
-  int l = c->token.u.ident.length;
-  c->token.kind = tok_IDENT;
-  printf("IDENT: %.*s %d\n", l, v, c->token.kind);
 }
 
 static const void nextsym_integer(context_t *c)
@@ -74,12 +68,10 @@ static const void nextsym_integer(context_t *c)
     c->token.u.integer.value += *c->p - '0';
     c->p++;
   }
-  printf("INTEGER: %d\n", c->token.u.integer.value);
 }
 
 static const void nextsym_string(context_t *c)
 {
-  printf("STTRING");
   c->token.kind = tok_STRING;
   c->p++;
   c->token.u.string.value = c->p;
@@ -95,7 +87,6 @@ static const void nextsym_string(context_t *c)
     }
   }
   c->p++;
-  printf("STRING: %.*s\n", c->token.u.string.length, c->token.u.string.value);
 }
 
 static int nextsym(context_t *c)
@@ -103,7 +94,6 @@ static int nextsym(context_t *c)
   c->token.kind = tok_none;
   while (c->p && *c->p && c->token.kind == tok_none) {
     if (c->p[0] == '/' && c->p[1] == '*') {
-      printf("Skipping COMMENT\n");
       /* Skip comment */
       c->p += 2;
       while (*c->p && (c->p[0] != '*' || c->p[1] != '/')) {
@@ -118,6 +108,14 @@ static int nextsym(context_t *c)
       case '\n':
       case '\r':
         /* Skip whitespace */
+        c->p++;
+        break;
+      case '(':
+        c->token.kind = tok_LPAREN;
+        c->p++;
+        break;
+      case ')':
+        c->token.kind = tok_RPAREN;
         c->p++;
         break;
       case '{':
@@ -138,6 +136,10 @@ static int nextsym(context_t *c)
         break;
       case '=':
         c->token.kind = tok_EQUAL;
+        c->p++;
+        break;
+      case ',':
+        c->token.kind = tok_COMMA;
         c->p++;
         break;
       case ':':
@@ -165,10 +167,10 @@ static int nextsym(context_t *c)
         break;
     }
   }
-  printf("TOKEN %d %c\n\n", c->token.kind, c->token.kind<255?c->token.kind:' ');
   if (c->token.kind != tok_none) {
     return 1;
   } else {
+    c->token.kind = tok_EOF;
     return 0;
   }
 }
@@ -191,7 +193,6 @@ int moberg_config_parser_acceptsym(context_t *c,
                                    token_t *token)
 {
   if (c->token.kind == kind) {
-    printf("ACCEPT %d %s", c->token.kind, expected_char[kind]);
     if (token) {
       *token = c->token;
     }
@@ -203,13 +204,17 @@ int moberg_config_parser_acceptsym(context_t *c,
     const char *what = NULL;
     switch (kind) {
     case tok_none: break;
+      case tok_EOF: what = "<EOF>"; break;
+    case tok_LPAREN: what = "("; break;
+    case tok_RPAREN: what = ")"; break;
     case tok_LBRACE: what = "{"; break;
     case tok_RBRACE: what = "}"; break;
     case tok_LBRACKET: what = "["; break;
     case tok_RBRACKET: what = "]"; break;
     case tok_EQUAL: what = "="; break;
+    case tok_COMMA: what = ","; break;
     case tok_COLON: what = ":"; break;
-    case tok_SEMICOLON: what = "y;"; break;
+    case tok_SEMICOLON: what = ";"; break;
     case tok_INTEGER: what = "<INTEGER>"; break;
     case tok_IDENT: what = "<IDENT>"; break;
     case tok_STRING: what = "<STRING>"; break;
@@ -219,7 +224,6 @@ int moberg_config_parser_acceptsym(context_t *c,
       c->expected.n++;
     }
   }
-  printf("REJECT %d (%d)", kind, c->token.kind);
   return 0;
 }
 
@@ -245,25 +249,39 @@ void moberg_config_parser_failed(
   FILE *f)
 {
   fprintf(f, "EXPECTED ");
-  for (int i = 0 ; i < c->expected.n ; i++) {
-    fprintf(f, "%s ", c->expected.what[i]);
+  for (int i = 0 ; i < c->expected.n; i++) {
+    if (i > 0) {
+      fprintf(f, " | ");
+    }
+    fprintf(f, "'%s'", c->expected.what[i]);
   }
-  const char *what = "";
+  fprintf(f, "\nGOT: ");
   switch (c->token.kind) {
-  case tok_none: break;
-  case tok_LBRACE: what = "{"; break;
-  case tok_RBRACE: what = "}"; break;
-  case tok_LBRACKET: what = "["; break;
-  case tok_RBRACKET: what = "]"; break;
-  case tok_EQUAL: what = "="; break;
-  case tok_COLON: what = ":"; break;
-  case tok_SEMICOLON: what = ";"; break;
-  case tok_INTEGER: what = "<INTEGER>"; break;
-  case tok_IDENT: what = "<IDENT>"; break;
-  case tok_STRING: what = "<STRING>"; break;
+    case tok_none: break;
+    case tok_EOF: fprintf(f, "<EOF>"); break;
+    case tok_LPAREN: fprintf(f, "("); break;
+    case tok_RPAREN: fprintf(f, ")"); break;
+    case tok_LBRACE: fprintf(f, "{"); break;
+    case tok_RBRACE: fprintf(f, "}"); break;
+    case tok_LBRACKET: fprintf(f, "["); break;
+    case tok_RBRACKET: fprintf(f, "]"); break;
+    case tok_EQUAL: fprintf(f, "="); break;
+    case tok_COMMA: fprintf(f, ","); break;
+    case tok_COLON: fprintf(f, ":"); break;
+    case tok_SEMICOLON: fprintf(f, ";"); break;
+    case tok_INTEGER:
+      fprintf(f, "%d (<INTEGER>)", c->token.u.integer.value);
+      break;
+    case tok_IDENT:
+      fprintf(f, "%.*s (<IDENT>)",
+              c->token.u.ident.length, c->token.u.ident.value);
+      break;
+    case tok_STRING:
+      fprintf(f, "\"%.*s'\" (<STRING>)",
+              c->token.u.string.length, c->token.u.string.value);
+      break;
   }
-  
-  fprintf(f, "\nGOT %s %s\n", what, c->p);
+  fprintf(f, "\n%s\n", c->p);
 }
 
 
@@ -288,7 +306,6 @@ err:
 static int parse_map(context_t *c,
                      struct moberg_driver *driver)
 {
-  printf("parsemap");
   if (acceptkeyword(c, "analog_in") ||
       acceptkeyword(c, "analog_out") ||
       acceptkeyword(c, "digital_in") ||
@@ -297,7 +314,6 @@ static int parse_map(context_t *c,
     if (! parse_map_range(c)) { goto err; }
     if (! acceptsym(c, tok_EQUAL, NULL)) { goto err; }
     driver->module.parse_map(c, 0);
-    if (! parse_map_range(c)) { goto err; }
     if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto err; }
   } else {
     goto err;
@@ -329,36 +345,34 @@ err:
   return 0;
 }
 
-static int parse_driver(context_t *c,
-                        ident_t name)
-{
-  struct moberg_driver *driver = moberg_open_driver(name);
-  if (! driver) {
-    printf("Driver not found\n");
-    goto err;
-  } else {
-    int OK = parse_device(c, driver);
-    moberg_close_driver(driver);
-    if (! OK) { goto err; } 
-  }
-  return 1;
-err:
-  return 0;
-}
-
 static int parse_config(context_t *c)
 {
   for (;;) {
-    token_t t;
-    if (acceptsym(c, tok_IDENT, &t)) {
-      printf("DRIVER=%.*s\n", t.u.ident.length, t.u.ident.value);
-      if (! parse_driver(c, t.u.ident)) { goto err; }
+    if (acceptsym(c, tok_EOF, NULL)) {
+      break;
+    } else {
+      token_t t;
+      struct moberg_driver *driver;
+      
+      if (! acceptkeyword(c, "driver")) { goto syntax_err; }
+      if (! acceptsym(c, tok_LPAREN, NULL)) { goto syntax_err; }
+      if (! acceptsym(c, tok_IDENT, &t)) { goto syntax_err; }
+      if (! acceptsym(c, tok_RPAREN, NULL)) { goto syntax_err; }
+      
+      if (! (driver = moberg_driver_open(t.u.ident))) { goto driver_not_found; }
+      int OK = parse_device(c, driver);
+      moberg_driver_close(driver);
+      if (! OK) { goto err; }
     }
   }
   return 1;
+syntax_err:  
+  moberg_config_parser_failed(c, stderr);
+  goto err;
+driver_not_found:
+  fprintf(stderr, "Could not open\n");
+  goto err;
 err:
-  printf("Failed!!");
-  exit (1);
   return 0;
 }
 

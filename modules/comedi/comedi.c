@@ -22,57 +22,64 @@ static inline int acceptkeyword(context_t *c,
   return moberg_config_parser_acceptkeyword(c, keyword);
 }
   
+struct moberg_driver_device {
+  const char *device;
+};
 
-static struct moberg_driver_config parse_config(
+
+static struct moberg_driver_device *parse_config(
   struct moberg_config_parser_context *c)
 {
-  struct moberg_driver_config result;
-  token_t t;
-  printf("PARSE_CONFIG %s\n", __FILE__);
-  printf("LBRACE %d", acceptsym(c, tok_LBRACE, &t));
+  struct moberg_driver_device *result = malloc(sizeof *result);
+  if (! result) {
+    fprintf(stderr, "Failed to allocate moberg device\n");
+    goto err;
+  }
+  if (! acceptsym(c, tok_LBRACE, NULL)) { goto syntax_err; }
   for (;;) {
     if (acceptsym(c, tok_RBRACE, NULL)) {
 	break;
     } else if (acceptkeyword(c, "device")) {
       token_t device;
-      if (! acceptsym(c, tok_EQUAL, NULL)) { goto err; }
-      if (! acceptsym(c, tok_STRING, &device)) { goto err; }
-      if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto err; }
+      if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
+      if (! acceptsym(c, tok_STRING, &device)) { goto syntax_err; }
+      if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
+      result->device = strndup(device.u.string.value, device.u.string.length);
     } else if (acceptkeyword(c, "config")) {
-      if (! acceptsym(c, tok_EQUAL, NULL)) { goto err; }
-      if (! acceptsym(c, tok_LBRACKET, NULL)) { goto err; }
+      if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
+      if (! acceptsym(c, tok_LBRACKET, NULL)) { goto syntax_err; }
       for (;;) {
 	if (acceptsym(c, tok_RBRACKET, NULL)) {
 	  break;
 	} else if (acceptsym(c, tok_IDENT, NULL) ||
 		   acceptsym(c, tok_STRING, NULL)) {
 	} else {
-	  goto err;
+	  goto syntax_err;
 	}
       }
-      if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto err; }
+      if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
     } else if (acceptkeyword(c, "modprobe")) {
-      if (! acceptsym(c, tok_EQUAL, NULL)) { goto err; }
-      if (! acceptsym(c, tok_LBRACKET, NULL)) { goto err; }
+      if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
+      if (! acceptsym(c, tok_LBRACKET, NULL)) { goto syntax_err; }
       for (;;) {
 	if (acceptsym(c, tok_RBRACKET, NULL)) {
 	  break;
 	} else if (acceptsym(c, tok_IDENT, NULL) ||
 		   acceptsym(c, tok_STRING, NULL)) {
 	} else {
-	  goto err;
+	  goto syntax_err;
 	}
       }
-      if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto err; }
+      if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
     } else {
-      goto err;
+      goto syntax_err;
     }
   }
-  printf("PARSE_CONFIG DONE%s\n", __FILE__);
   return result;
- err:
+syntax_err:
   moberg_config_parser_failed(c, stderr);
-  exit(1);
+err:
+  return NULL;
 }
 
 static struct moberg_driver_map parse_map(
@@ -81,20 +88,26 @@ static struct moberg_driver_map parse_map(
 {
   struct moberg_driver_map result;
 
-  token_t t;
-  printf("PARSE_MAP %s\n", __FILE__);
-  if (! acceptkeyword(c, "subdevice") != 0) {  goto err; }
-  if (! acceptsym(c, tok_LBRACKET, NULL)) { goto err; }
-  if (! acceptsym(c, tok_INTEGER, &t)) { goto err; }
-  if (! acceptsym(c, tok_RBRACKET, NULL)) { goto err; }
-    
-/*
-  const char *buf = context->buf;
-  while (*buf && *buf != '}') {
-    buf++;
+  if (! acceptsym(c, tok_LBRACE, NULL)) { goto err; }
+  for (;;) {
+    token_t subdevice;
+    if (! acceptkeyword(c, "subdevice") != 0) {  goto err; }
+    if (! acceptsym(c, tok_LBRACKET, NULL)) { goto err; }
+    if (! acceptsym(c, tok_INTEGER, &subdevice)) { goto err; }
+    if (! acceptsym(c, tok_RBRACKET, NULL)) { goto err; }
+    if (acceptkeyword(c, "route")) {
+      token_t route;
+      if (! acceptsym(c, tok_INTEGER, &route)) { goto err; }
+    }
+    if (! acceptsym(c, tok_LBRACKET, NULL)) { goto err; }
+    if (! acceptsym(c, tok_INTEGER, NULL)) { goto err; }
+    if (acceptsym(c, tok_COLON, NULL)) { 
+      if (! acceptsym(c, tok_INTEGER, NULL)) { goto err; }
+    }
+    if (! acceptsym(c, tok_RBRACKET, NULL)) { goto err; }
+    if (! acceptsym(c, tok_COMMA, NULL)) { break; }
   }
-  context->buf = buf + 1;
-*/
+  if (! acceptsym(c, tok_RBRACE, NULL)) { goto err; }
   return result;
 err:
   moberg_config_parser_failed(c, stderr);
