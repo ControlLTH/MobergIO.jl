@@ -1,4 +1,4 @@
-#include <moberg_config_parser.h>
+#include <moberg_config_parser_module.h>
 #include <moberg_driver.h>
 #include <stdio.h>
 #include <stdlib.h>

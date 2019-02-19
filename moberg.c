@@ -10,35 +10,52 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <string.h>
-#include "moberg.h"
+#include <moberg.h>
+#include <moberg_config.h>
+#include <moberg_config_parser.h>
 
 struct moberg_digital_in_t {
   int index;
   char *driver;
 };
 
-struct moberg_t {
+struct moberg {
   struct {
     int count;
     struct moberg_digital_in_t *value;
   } digital_in;
 };
 
-static void parse_config_at(struct moberg_t *config,
-                            int dirfd,
-                            const char *pathname)
+static void parse_config_at(
+  struct moberg *moberg,
+  int dirfd,
+  const char *pathname)
 {
   if (dirfd >= 0) {
     int fd = openat(dirfd, pathname, O_RDONLY);
     if (fd >= 0) {
-      printf("Parsing... %s %d %d\n", pathname, dirfd, fd);
+      struct stat statbuf;
+      if (fstat(fd, &statbuf) == 0) {
+        char *buf = malloc(statbuf.st_size + 1);
+        if (buf) {
+          if (read(fd, buf, statbuf.st_size) == statbuf.st_size) {
+            buf[statbuf.st_size] = 0;
+          }
+          printf("Parsing... %s %d %d\n", pathname, dirfd, fd);
+          struct moberg_config *config;
+          config = moberg_config_parse(buf);
+          if (config) {
+          }
+          free(buf);
+        }
+      }
       close(fd);
     }
   }
-  
 }
 
-static int conf_filter(const struct dirent *entry)
+static int conf_filter(
+  const struct dirent *entry)
 {
   char *dot = strrchr(entry->d_name, '.');
   if (dot != NULL && strcmp(dot, ".conf") == 0) {
@@ -48,44 +65,71 @@ static int conf_filter(const struct dirent *entry)
   }
 }
 
-static void parse_config_dir_at(struct moberg_t *config,
-                                int dirfd)
+static void parse_config_dir_at(
+  struct moberg *config,
+  int dirfd)
 {
   if (dirfd >= 0) {
     struct dirent **entry = NULL;
     int n = scandirat(dirfd, ".", &entry, conf_filter, alphasort);
     for (int i = 0 ; i < n ; i++) {
       parse_config_at(config, dirfd, entry[i]->d_name);
+      free(entry[i]);
     }
     free(entry);
   }
   
 }
 
-const struct moberg_t *moberg_init()
+struct moberg *moberg_new(
+  struct moberg_config *config)
 {
-  struct moberg_t *result = malloc(sizeof(struct moberg_t));
-  
-  const char * const *config_paths = xdgSearchableConfigDirectories(NULL);
-  const char * const *path;
-  for (path = config_paths ; *path ; path++) {
-    int dirfd1 = open(*path, O_DIRECTORY);
-    if (dirfd >= 0) {
-      parse_config_at(result, dirfd1, "moberg.conf");
-      int dirfd2 = openat(dirfd1, "moberg.d", O_DIRECTORY);
-      if (dirfd2 >= 0) { 
-        parse_config_dir_at(result, dirfd2);
-        close(dirfd2);
+  struct moberg *result = malloc(sizeof(*result));
+  if (result) {
+    if (! config) {
+      /* Parse default configuration(s) */
+      const char * const *config_paths = xdgSearchableConfigDirectories(NULL);
+      const char * const *path;
+      for (path = config_paths ; *path ; path++) {
+        int dirfd1 = open(*path, O_DIRECTORY);
+        if (dirfd >= 0) {
+          parse_config_at(result, dirfd1, "moberg.conf");
+          int dirfd2 = openat(dirfd1, "moberg.d", O_DIRECTORY);
+          if (dirfd2 >= 0) { 
+            parse_config_dir_at(result, dirfd2);
+            close(dirfd2);
+          }
+          close(dirfd1);
+        }
+        free((char*)*path);
       }
-      close(dirfd1);
+      free((const char **)config_paths);
+
+      /* Read environment default */
+      /* Parse environment overrides */
     }
   }
-  free((const char **)config_paths);
-
-  /* Read local default */
-  /* Read environment default */
-  /* Parse environment overrides */
-  
   
   return result;
 }
+
+void moberg_free(struct moberg *moberg)
+{
+  free(moberg);
+}
+
+enum moberg_status moberg_start(
+  struct moberg *moberg,
+  FILE *f)
+{
+  return moberg_OK;
+}
+
+
+enum moberg_status moberg_stop(
+  struct moberg *moberg,
+  FILE *f)
+{
+  return moberg_OK;
+}
+

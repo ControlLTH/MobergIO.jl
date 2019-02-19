@@ -1,7 +1,7 @@
 #ifndef __MOBERG_DRIVER_H__
 #define __MOBERG_DRIVER_H__
 
-#include <moberg_config_parser.h>
+#include <moberg_config_parser_module.h>
 
 struct moberg_driver_device;
 

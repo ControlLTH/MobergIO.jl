@@ -8,11 +8,24 @@
 #include <moberg_config_parser.h>
 #include <moberg_config_parser_module.h>
 #include <moberg_driver.h>
+#include <moberg_device.h>
 
 typedef enum moberg_config_parser_token_kind kind_t;
 typedef struct moberg_config_parser_token token_t;
 typedef struct moberg_config_parser_ident ident_t;
-typedef struct moberg_config_parser_context context_t;
+
+#define MAX_EXPECTED 10
+
+typedef struct moberg_config_parser_context {
+  const char *buf; /* Pointer to data to be parsed */
+  const char *p;   /* current parse location */
+  token_t token;
+  struct {
+    int n;
+    const char *what[MAX_EXPECTED];
+  } expected;
+} context_t;
+
 
 static inline int acceptsym(context_t *c,
 			   kind_t kind,
@@ -27,18 +40,6 @@ static inline int acceptkeyword(context_t *c,
   return moberg_config_parser_acceptkeyword(c, keyword);
 }
  
-#define MAX_EXPECTED 10
-
-typedef struct moberg_config_parser_context {
-  char *buf;      /* Pointer to data to be parsed */
-  const char *p;  /* current parse location */
-  token_t token;
-  struct {
-    int n;
-    const char *what[MAX_EXPECTED];
-  } expected;
-} context_t;
-
 static const void nextsym_ident(context_t *c)
 {
   c->token.kind = tok_IDENT;
@@ -326,27 +327,37 @@ err:
   return 0;
 }
 
-static int parse_device(context_t *c,
-                        struct moberg_driver *driver)
+struct moberg_device *parse_device(context_t *c,
+                                   struct moberg_driver *driver)
 {
-  if (! acceptsym(c, tok_LBRACE, NULL)) { goto err; }
+  struct moberg_device *result = moberg_device_new(driver);
+  if (! result) {
+    goto err;
+  }
+    
+  if (! acceptsym(c, tok_LBRACE, NULL)) { goto syntax_err; }
   for (;;) {
     if (acceptkeyword(c, "config")) {
-      driver->module.parse_config(c);
+      void *config = driver->module.parse_config(c);
+      result->add_config(config);
+      free(config);
     } else if (acceptkeyword(c, "map")) {
-      parse_map(c, driver);
+      result->add_map(parse_map(c, driver));
     } else if (acceptsym(c, tok_RBRACE, NULL)) {
       break;
     } else {
-      goto err;
+      goto syntax_err;
     }
   }
-  return 1;
+  return result;
+syntax_err:
+  moberg_config_parser_failed(c, stderr);
 err:
-  return 0;
+  moberg_device_free(result);
+  return NULL;
 }
 
-static int parse_config(context_t *c)
+static int parse(context_t *c)
 {
   for (;;) {
     if (acceptsym(c, tok_EOF, NULL)) {
@@ -360,40 +371,38 @@ static int parse_config(context_t *c)
       if (! acceptsym(c, tok_IDENT, &t)) { goto syntax_err; }
       if (! acceptsym(c, tok_RPAREN, NULL)) { goto syntax_err; }
       
-      if (! (driver = moberg_driver_open(t.u.ident))) { goto driver_not_found; }
-      int OK = parse_device(c, driver);
+      if (! (driver = moberg_driver_open(t.u.ident))) {
+        fprintf(stderr, "Could not open driver '%.*s'\n",
+                t.u.ident.length, t.u.ident.value);
+        goto err;
+      }
+      struct moberg_device *device = parse_device(c, driver);
       moberg_driver_close(driver);
-      if (! OK) { goto err; }
+      if (! device) {
+        goto err;
+      }
+      fprintf(stderr, "SAVE device\n");
     }
   }
   return 1;
 syntax_err:  
   moberg_config_parser_failed(c, stderr);
   goto err;
-driver_not_found:
-  fprintf(stderr, "Could not open\n");
-  goto err;
 err:
   return 0;
 }
 
-static char *read_fd(int fd)
-{
-  char *result = malloc(10000); /* HACK */
-  int pos = read(fd, result, 10000);
-  result[pos] = 0;
-  return result;
-}
-
-int main(int argc, char *argv[])
+struct moberg_config *moberg_config_parse(const char *buf)
 {
   context_t context;
-  int fd = open(argv[1], O_RDONLY);
-  context.buf = read_fd(fd);
+
+  context.expected.n = 0;
+  context.buf = buf;
   context.p = context.buf;
-  close(fd);
-  printf("%s\n", context.buf);
   nextsym(&context);
-  parse_config(&context);
-  free(context.buf);
+  parse(&context);
+
+  return NULL;
 }
+  
+
