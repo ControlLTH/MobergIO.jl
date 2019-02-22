@@ -8,4 +8,4 @@ all:	$(LIBRARIES:%=../../build/%)
 ../../build/libmoberg_comedi.so: comedi.c Makefile
 	$(CC) -o $@ $(CCFLAGS) -shared -fPIC $<
 
-../../build/libmoberg_comedi.so: ../../moberg_config_parser_module.h
+../../build/libmoberg_comedi.so: ../../moberg_module.h

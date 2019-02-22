@@ -1,26 +1,26 @@
 #include <moberg_config.h>
-#include <moberg_config_parser.h>
-#include <moberg_config_parser_module.h>
+#include <moberg_parser.h>
+#include <moberg_module.h>
 #include <moberg_device.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum moberg_config_parser_token_kind kind_t;
-typedef struct moberg_config_parser_token token_t;
-typedef struct moberg_config_parser_context context_t;
+typedef enum moberg_parser_token_kind kind_t;
+typedef struct moberg_parser_token token_t;
+typedef struct moberg_parser_context context_t;
 
 static inline int acceptsym(context_t *c,
                             kind_t kind,
                             token_t *token)
 {
-  return moberg_config_parser_acceptsym(c, kind, token);
+  return moberg_parser_acceptsym(c, kind, token);
 }
   
 static inline int acceptkeyword(context_t *c,
 				const char *keyword)
 {
-  return moberg_config_parser_acceptkeyword(c, keyword);
+  return moberg_parser_acceptkeyword(c, keyword);
 }
   
 struct moberg_device_config {
@@ -30,7 +30,7 @@ struct moberg_device_config {
 
 static int parse_config(
   struct moberg_device *device,
-  struct moberg_config_parser_context *c)
+  struct moberg_parser_context *c)
 {
   struct moberg_device_config *config = malloc(sizeof *config);
   if (! config) {
@@ -60,7 +60,7 @@ static int parse_config(
   moberg_device_set_config(device, config);
   return 1;
 syntax_err:
-  moberg_config_parser_failed(c, stderr);
+  moberg_parser_failed(c, stderr);
   free(config);
 err:
   return 0;
@@ -68,7 +68,7 @@ err:
 
 static int parse_map(
   struct moberg_device *device,
-  struct moberg_config_parser_context *c,
+  struct moberg_parser_context *c,
   enum moberg_device_map_kind ignore)
 {
   enum moberg_device_map_kind kind;
@@ -109,7 +109,7 @@ static int parse_map(
   }
   return 1;
 syntax_err:
-  moberg_config_parser_failed(c, stderr);
+  moberg_parser_failed(c, stderr);
   return 0;
 }
 

@@ -5,17 +5,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <moberg_config_parser.h>
-#include <moberg_config_parser_module.h>
+#include <moberg_parser.h>
+#include <moberg_module.h>
 #include <moberg_device.h>
 
-typedef enum moberg_config_parser_token_kind kind_t;
-typedef struct moberg_config_parser_token token_t;
-typedef struct moberg_config_parser_ident ident_t;
+typedef enum moberg_parser_token_kind kind_t;
+typedef struct moberg_parser_token token_t;
+typedef struct moberg_parser_ident ident_t;
 
 #define MAX_EXPECTED 10
 
-typedef struct moberg_config_parser_context {
+typedef struct moberg_parser_context {
   struct moberg_config *config;
   const char *buf; /* Pointer to data to be parsed */
   const char *p;   /* current parse location */
@@ -31,13 +31,13 @@ static inline int acceptsym(context_t *c,
 			   kind_t kind,
 			   token_t *token)
 {
-  return moberg_config_parser_acceptsym(c, kind, token);
+  return moberg_parser_acceptsym(c, kind, token);
 }
   
 static inline int acceptkeyword(context_t *c,
 				const char *keyword)
 {
-  return moberg_config_parser_acceptkeyword(c, keyword);
+  return moberg_parser_acceptkeyword(c, keyword);
 }
  
 static const void nextsym_ident(context_t *c)
@@ -190,7 +190,7 @@ static int peeksym(context_t *c,
   return 0;
 }
 
-int moberg_config_parser_acceptsym(context_t *c,
+int moberg_parser_acceptsym(context_t *c,
                                    kind_t kind,
                                    token_t *token)
 {
@@ -229,7 +229,7 @@ int moberg_config_parser_acceptsym(context_t *c,
   return 0;
 }
 
-int moberg_config_parser_acceptkeyword(context_t *c,
+int moberg_parser_acceptkeyword(context_t *c,
 				       const char *keyword)
 {
   token_t t;
@@ -246,8 +246,8 @@ int moberg_config_parser_acceptkeyword(context_t *c,
   return 0;
 }
 
-void moberg_config_parser_failed(
-  struct moberg_config_parser_context *c,
+void moberg_parser_failed(
+  struct moberg_parser_context *c,
   FILE *f)
 {
   fprintf(f, "EXPECTED ");
@@ -307,7 +307,7 @@ static int parse_map_range(context_t *c,
   range->max = max.u.integer.value;
   return 1;
 syntax_err:
-  moberg_config_parser_failed(c, stderr);
+  moberg_parser_failed(c, stderr);
 err:
   return 0;
 }
@@ -329,7 +329,7 @@ static int parse_map(context_t *c,
   if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
   return 1;
 syntax_err:
-  moberg_config_parser_failed(c, stderr);
+  moberg_parser_failed(c, stderr);
 err:    
   return 0;
 }
@@ -356,7 +356,7 @@ static int parse_device(context_t *c,
   }
   return 1;
 syntax_err:
-  moberg_config_parser_failed(c, stderr);
+  moberg_parser_failed(c, stderr);
 err:
   return 0;
 }
@@ -397,7 +397,7 @@ static int parse(context_t *c)
   }
   return 1;
 syntax_err:  
-  moberg_config_parser_failed(c, stderr);
+  moberg_parser_failed(c, stderr);
   goto err;
 err:
   return 0;

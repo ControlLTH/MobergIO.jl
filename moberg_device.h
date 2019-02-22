@@ -2,7 +2,7 @@
 #define __MOBERG_DEVICE_H__
 
 #include <moberg_config.h>
-#include <moberg_config_parser.h>
+#include <moberg_parser.h>
 
 struct moberg_device_map_range {
   enum moberg_device_map_kind {
@@ -51,17 +51,17 @@ struct moberg_device_encoder_in {
   int (*read)(struct moberg_device_encoder_in_context *, long *value);
 };
   
-struct moberg_config_parser_context;
+struct moberg_parser_context;
 struct moberg_device;
 struct moberg_device_config;
 
 struct moberg_device_driver {
   int (*parse_config)(
     struct moberg_device* device,
-    struct moberg_config_parser_context *context);
+    struct moberg_parser_context *context);
   int (*parse_map)(
     struct moberg_device* device,
-    struct moberg_config_parser_context *context,
+    struct moberg_parser_context *context,
     enum moberg_device_map_kind kind);
   int (*config_free)(
     struct moberg_device_config *config);
@@ -74,13 +74,13 @@ struct moberg_device *moberg_device_new(const char *driver);
 void moberg_device_free(struct moberg_device *device);
 
 int moberg_device_parse_config(struct moberg_device* device,
-                               struct moberg_config_parser_context *context);
+                               struct moberg_parser_context *context);
 
 int moberg_device_set_config(struct moberg_device* device,
                              struct moberg_device_config *config);
 
 int moberg_device_parse_map(struct moberg_device* device,
-                            struct moberg_config_parser_context *context,
+                            struct moberg_parser_context *context,
                             struct moberg_device_map_range range);
 
 int moberg_device_add_analog_in(struct moberg_device* device,

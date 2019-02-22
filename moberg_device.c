@@ -56,7 +56,7 @@ void moberg_device_free(struct moberg_device *device)
 }
 
 int moberg_device_parse_config(struct moberg_device *device,
-                               struct moberg_config_parser_context *context)
+                               struct moberg_parser_context *context)
 {
   return device->driver.parse_config(device, context);
 }
@@ -73,7 +73,7 @@ int moberg_device_set_config(struct moberg_device *device,
 }
 
 int moberg_device_parse_map(struct moberg_device* device,
-                            struct moberg_config_parser_context *context,
+                            struct moberg_parser_context *context,
                             struct moberg_device_map_range range)
 {
   int result;

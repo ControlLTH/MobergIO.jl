@@ -12,7 +12,7 @@
 #include <string.h>
 #include <moberg.h>
 #include <moberg_config.h>
-#include <moberg_config_parser.h>
+#include <moberg_parser.h>
 
 struct moberg_digital_in_t {
   int index;

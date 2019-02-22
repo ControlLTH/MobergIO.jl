@@ -42,12 +42,12 @@ test: all
 
 clean:
 	find build -type f -delete
-	rm *~
+	rm -f *~
 
 build/libmoberg.so: build/lib/moberg_config.o
 build/libmoberg.so: build/lib/moberg_device.o
-build/libmoberg.so: build/lib/moberg_config_parser.o
+build/libmoberg.so: build/lib/moberg_parser.o
 build/lib/moberg_device.o: moberg_device.h
-build/parse_config.o: moberg_config_parser.h
+build/parse_config.o: moberg_parser.h
 parse_config: build/moberg_driver.o
 parse_config: build/parse_config.o
