@@ -3,6 +3,8 @@
 
 #include <moberg_config.h>
 
+struct moberg_config_parser_context;
+
 struct moberg_config *moberg_config_parse(const char *buf);
 
 #endif

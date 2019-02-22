@@ -8,5 +8,6 @@ int main(int argc, char *argv[])
   moberg_start(moberg, stdout);
   printf("STOP:\n");
   moberg_stop(moberg, stdout);
+  printf("DONE\n");
   moberg_free(moberg);
 }

@@ -2,8 +2,8 @@
 #define __MOBERG_CONFIG_PARSER_MODULE_H__
 
 #include <stdio.h>
+#include <moberg_config_parser.h>
 
-struct moberg_config_parser_context;
 struct moberg_config_parser_token;
 
 enum moberg_config_parser_token_kind {

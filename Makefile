@@ -5,7 +5,7 @@ MODULES:=$(wildcard modules/*)
 export CCFLAGS LDFLAGS
 LDFLAGS_parse_config=-ldl -export-dynamic
 
-all: $(LIBRARIES:%=build/%) $(MODULES) parse_config
+all: $(LIBRARIES:%=build/%) $(MODULES) 
 	echo $(MODULES)
 	echo $(CCFLAGS)
 
@@ -34,18 +34,20 @@ $(MODULES):
 .PHONY: test
 test: all
 	$(MAKE) -C test test
-	LD_LIBRARY_PATH=build \
-		valgrind ./parse_config test/*/*.conf
+#	LD_LIBRARY_PATH=build \
+#		valgrind ./parse_config test/*/*.conf
 #	LD_LIBRARY_PATH=build HOME=$$(pwd)/test \
 #		valgrind -q --error-exitcode=1 test/test_c
 
 
 clean:
-	rm build/*
+	find build -type f -delete
+	rm *~
 
-
-build/libmoberg.so: build/lib/moberg_driver.o
+build/libmoberg.so: build/lib/moberg_config.o
+build/libmoberg.so: build/lib/moberg_device.o
 build/libmoberg.so: build/lib/moberg_config_parser.o
+build/lib/moberg_device.o: moberg_device.h
 build/parse_config.o: moberg_config_parser.h
 parse_config: build/moberg_driver.o
 parse_config: build/parse_config.o

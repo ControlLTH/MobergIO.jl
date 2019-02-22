@@ -20,6 +20,7 @@ struct moberg_digital_in_t {
 };
 
 struct moberg {
+  struct moberg_config *config;
   struct {
     int count;
     struct moberg_digital_in_t *value;
@@ -42,9 +43,15 @@ static void parse_config_at(
             buf[statbuf.st_size] = 0;
           }
           printf("Parsing... %s %d %d\n", pathname, dirfd, fd);
-          struct moberg_config *config;
-          config = moberg_config_parse(buf);
+          struct moberg_config *config = moberg_config_parse(buf);
+          printf("-> %p\n", config);
           if (config) {
+            if (! moberg->config) {
+              moberg->config = config;
+            } else {
+              moberg_config_join(moberg->config, config);
+              moberg_config_free(config);
+            }
           }
           free(buf);
         }
@@ -85,7 +92,10 @@ struct moberg *moberg_new(
   struct moberg_config *config)
 {
   struct moberg *result = malloc(sizeof(*result));
-  if (result) {
+  if (! result) {
+    fprintf(stderr, "Failed to allocate moberg struct\n");
+  } else {
+    result->config = NULL;
     if (! config) {
       /* Parse default configuration(s) */
       const char * const *config_paths = xdgSearchableConfigDirectories(NULL);
@@ -96,6 +106,7 @@ struct moberg *moberg_new(
           parse_config_at(result, dirfd1, "moberg.conf");
           int dirfd2 = openat(dirfd1, "moberg.d", O_DIRECTORY);
           if (dirfd2 >= 0) { 
+            parse_config_dir_at(result, dirfd2);
             parse_config_dir_at(result, dirfd2);
             close(dirfd2);
           }
@@ -115,7 +126,10 @@ struct moberg *moberg_new(
 
 void moberg_free(struct moberg *moberg)
 {
-  free(moberg);
+  if (moberg) {
+    moberg_config_free(moberg->config);
+    free(moberg);
+  }
 }
 
 enum moberg_status moberg_start(

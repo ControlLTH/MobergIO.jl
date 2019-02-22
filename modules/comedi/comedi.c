@@ -1,5 +1,7 @@
+#include <moberg_config.h>
+#include <moberg_config_parser.h>
 #include <moberg_config_parser_module.h>
-#include <moberg_driver.h>
+#include <moberg_device.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +10,11 @@ typedef enum moberg_config_parser_token_kind kind_t;
 typedef struct moberg_config_parser_token token_t;
 typedef struct moberg_config_parser_ident ident_t;
 typedef struct moberg_config_parser_context context_t;
+
+struct moberg_device_map {};
+struct moberg_device_config {
+  char *device;
+};
 
 static inline int acceptsym(context_t *c,
 			   kind_t kind,
@@ -22,17 +29,13 @@ static inline int acceptkeyword(context_t *c,
   return moberg_config_parser_acceptkeyword(c, keyword);
 }
   
-struct moberg_driver_device {
-  const char *device;
-};
-
-
-static struct moberg_driver_device *parse_config(
+static int parse_config(
+  struct moberg_device *device,
   struct moberg_config_parser_context *c)
 {
-  struct moberg_driver_device *result = malloc(sizeof *result);
-  if (! result) {
-    fprintf(stderr, "Failed to allocate moberg device\n");
+  struct moberg_device_config *config = malloc(sizeof *config);
+  if (! config) {
+    fprintf(stderr, "Failed to allocate moberg device config\n");
     goto err;
   }
   if (! acceptsym(c, tok_LBRACE, NULL)) { goto syntax_err; }
@@ -44,7 +47,7 @@ static struct moberg_driver_device *parse_config(
       if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
       if (! acceptsym(c, tok_STRING, &device)) { goto syntax_err; }
       if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
-      result->device = strndup(device.u.string.value, device.u.string.length);
+      config->device = strndup(device.u.string.value, device.u.string.length);
     } else if (acceptkeyword(c, "config")) {
       if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
       if (! acceptsym(c, tok_LBRACKET, NULL)) { goto syntax_err; }
@@ -75,18 +78,21 @@ static struct moberg_driver_device *parse_config(
       goto syntax_err;
     }
   }
-  return result;
+  moberg_device_set_config(device, config);
+  return 1;
 syntax_err:
   moberg_config_parser_failed(c, stderr);
+  free(config);
 err:
-  return NULL;
+  return 0;
 }
 
-static struct moberg_driver_map parse_map(
+static int parse_map(
+  struct moberg_device *device,
   struct moberg_config_parser_context *c,
-  enum moberg_config_parser_token_kind kind)
+  enum moberg_device_map_kind kind)
 {
-  struct moberg_driver_map result;
+  token_t min, max;
 
   if (! acceptsym(c, tok_LBRACE, NULL)) { goto err; }
   for (;;) {
@@ -100,21 +106,50 @@ static struct moberg_driver_map parse_map(
       if (! acceptsym(c, tok_INTEGER, &route)) { goto err; }
     }
     if (! acceptsym(c, tok_LBRACKET, NULL)) { goto err; }
-    if (! acceptsym(c, tok_INTEGER, NULL)) { goto err; }
+    if (! acceptsym(c, tok_INTEGER, &min)) { goto err; }
     if (acceptsym(c, tok_COLON, NULL)) { 
-      if (! acceptsym(c, tok_INTEGER, NULL)) { goto err; }
+      if (! acceptsym(c, tok_INTEGER, &max)) { goto err; }
+    } else {
+      max = min;
+    }
+    for (int i = min.u.integer.value ; i <= max.u.integer.value ; i++) {
+      switch (kind) {
+        case map_analog_in:
+          moberg_device_add_analog_in(device, NULL);
+          break;
+        case map_analog_out:
+          moberg_device_add_analog_out(device, NULL);
+          break;
+        case map_digital_in:
+          moberg_device_add_digital_in(device, NULL);
+          break;
+        case map_digital_out:
+          moberg_device_add_digital_out(device, NULL);
+          break;
+        case map_encoder_in:
+          moberg_device_add_encoder_in(device, NULL);
+          break;
+      }
     }
     if (! acceptsym(c, tok_RBRACKET, NULL)) { goto err; }
     if (! acceptsym(c, tok_COMMA, NULL)) { break; }
+    
   }
   if (! acceptsym(c, tok_RBRACE, NULL)) { goto err; }
-  return result;
+  return 1;
 err:
   moberg_config_parser_failed(c, stderr);
-  exit(1);
+  return 0;
 }
 
-struct moberg_driver_module moberg_module = {
+static int config_free(struct moberg_device_config *config)
+{
+  free(config->device);
+  return 1;
+}
+
+struct moberg_device_driver moberg_device_driver = {
   .parse_config = parse_config,
   .parse_map = parse_map,
+  .config_free = config_free
 };
