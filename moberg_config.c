@@ -30,6 +30,7 @@ struct moberg_config
     struct device_entry *next;
     struct moberg_device *device;
   } *device;
+#if 0
   struct  {
     int capacity;
     struct analog_in_entry {
@@ -65,6 +66,7 @@ struct moberg_config
       struct moberg_device_encoder_in *channel;
     } *value;
   } encoder_in;
+#endif
 };
 
 struct moberg_config *moberg_config_new()
@@ -73,6 +75,7 @@ struct moberg_config *moberg_config_new()
 
   if (result) {
     result->device = NULL;
+#if 0
     result->analog_in.capacity = 0;
     result->analog_in.value = NULL;
     result->analog_out.capacity = 0;
@@ -83,6 +86,7 @@ struct moberg_config *moberg_config_new()
     result->digital_out.value = NULL;
     result->encoder_in.capacity = 0;
     result->encoder_in.value = NULL;
+#endif
   }
   
   return result;
@@ -97,11 +101,13 @@ void moberg_config_free(struct moberg_config *config)
     moberg_device_free(tmp->device);
     free(tmp);
   }
+#if 0
   free(config->analog_in.value);
   free(config->analog_out.value);
   free(config->digital_in.value);
   free(config->digital_out.value);
   free(config->encoder_in.value);
+#endif
   free(config);
 }
 
@@ -130,6 +136,14 @@ int moberg_config_add_device(struct moberg_config *config,
   return 1;
 }
 
+int moberg_config_install_channels(struct moberg_config *config,
+                                   struct moberg_install_channels *install)
+{
+  return moberg_device_install_channels(config->device->device, install);
+}
+
+
+#if 0
 int moberg_config_add_analog_in(struct moberg_config *config,
                                 int index,
                                 struct moberg_device* device,
@@ -190,3 +204,4 @@ err:
   return 0;
 }
                             
+#endif

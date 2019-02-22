@@ -90,7 +90,10 @@ static void parse_config_dir_at(
 
 static int install_config(struct moberg *moberg)
 {
-  return 1;
+  struct moberg_install_channels install = {
+    .context=moberg
+  };
+  return moberg_config_install_channels(moberg->config, &install);
 }
 
 struct moberg *moberg_new(

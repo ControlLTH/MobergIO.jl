@@ -2,12 +2,14 @@
 #define __MOBERG_H__
 
 #include <stdio.h>
-#include <moberg_config.h>
 
 struct moberg;
+struct moberg_config;
+
 enum moberg_status { moberg_OK };
 
 struct moberg *moberg_new(struct moberg_config *config);
+
 void moberg_free(struct moberg *moberg);
 
 /* Input/output functions */

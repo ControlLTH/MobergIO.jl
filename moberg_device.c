@@ -214,4 +214,11 @@ int moberg_device_add_encoder_in(struct moberg_device* device,
   }
   return result;
 }
-                            
+
+int moberg_device_install_channels(struct moberg_device *device,
+                                   struct moberg_install_channels *install)
+{
+  printf("INSTALL\n");
+  return 1;
+}
+

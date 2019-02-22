@@ -1,6 +1,7 @@
 #ifndef __MOBERG_DEVICE_H__
 #define __MOBERG_DEVICE_H__
 
+#include <moberg.h>
 #include <moberg_config.h>
 #include <moberg_parser.h>
 
@@ -47,6 +48,15 @@ struct moberg_device_encoder_in {
   int (*read)(struct moberg_device_encoder_in_context *, long *value);
 };
   
+struct moberg_install_channels {
+  struct moberg *context;
+  int (*analog_in)(int index, struct moberg_device_analog_in *channel);
+  int (*analog_out)(int index, struct moberg_device_analog_out *channel);
+  int (*digital_in)(int index, struct moberg_device_digital_in *channel);
+  int (*digital_out)(int index, struct moberg_device_digital_in *channel);
+  int (*encoder_in)(int index, struct moberg_device_encoder_in *channel);
+};
+
 struct moberg_parser_context;
 struct moberg_device;
 struct moberg_device_config;
@@ -96,5 +106,9 @@ int moberg_device_add_digital_out(struct moberg_device* device,
                             
 int moberg_device_add_encoder_in(struct moberg_device* device,
                                  struct moberg_device_encoder_in *channel);
+
+int moberg_device_install_channels(struct moberg_device *device,
+                                   struct moberg_install_channels *install);
+
 
 #endif

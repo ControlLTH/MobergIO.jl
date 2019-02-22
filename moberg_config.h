@@ -1,9 +1,8 @@
 #ifndef __MOBERG_CONFIG_H__
 #define __MOBERG_CONFIG_H__
 
+#include <moberg.h>
 #include <moberg_device.h>
-
-struct moberg_config;
 
 struct moberg_config *moberg_config_new();
 
@@ -15,6 +14,10 @@ int moberg_config_join(struct moberg_config *dest,
 int moberg_config_add_device(struct moberg_config *config,
                              struct moberg_device *device);
 
+int moberg_config_install_channels(struct moberg_config *config,
+                                   struct moberg_install_channels *install);
+
+#if 0
 int moberg_config_add_analog_in(struct moberg_config *config,
                                 int index,
                                 struct moberg_device* device,
@@ -39,7 +42,6 @@ int moberg_config_add_encoder_in(struct moberg_config *config,
                                  int index,
                                  struct moberg_device* device,
                                  struct moberg_device_encoder_in *channel);
-
-
+# endif
 
 #endif
