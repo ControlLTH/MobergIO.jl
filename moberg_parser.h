@@ -5,6 +5,6 @@
 
 struct moberg_parser_context;
 
-struct moberg_config *moberg_config_parse(const char *buf);
+struct moberg_config *moberg_parse(const char *buf);
 
 #endif

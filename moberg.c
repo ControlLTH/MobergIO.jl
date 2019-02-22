@@ -43,7 +43,7 @@ static void parse_config_at(
             buf[statbuf.st_size] = 0;
           }
           printf("Parsing... %s %d %d\n", pathname, dirfd, fd);
-          struct moberg_config *config = moberg_config_parse(buf);
+          struct moberg_config *config = moberg_parse(buf);
           printf("-> %p\n", config);
           if (config) {
             if (! moberg->config) {
@@ -88,39 +88,49 @@ static void parse_config_dir_at(
   
 }
 
+static int install_config(struct moberg *moberg)
+{
+  return 1;
+}
+
 struct moberg *moberg_new(
   struct moberg_config *config)
 {
   struct moberg *result = malloc(sizeof(*result));
   if (! result) {
     fprintf(stderr, "Failed to allocate moberg struct\n");
+    goto err;
+  }
+  if (config) {
+    result->config = config;
   } else {
     result->config = NULL;
-    if (! config) {
-      /* Parse default configuration(s) */
-      const char * const *config_paths = xdgSearchableConfigDirectories(NULL);
-      const char * const *path;
-      for (path = config_paths ; *path ; path++) {
-        int dirfd1 = open(*path, O_DIRECTORY);
-        if (dirfd >= 0) {
-          parse_config_at(result, dirfd1, "moberg.conf");
-          int dirfd2 = openat(dirfd1, "moberg.d", O_DIRECTORY);
-          if (dirfd2 >= 0) { 
-            parse_config_dir_at(result, dirfd2);
-            parse_config_dir_at(result, dirfd2);
-            close(dirfd2);
-          }
-          close(dirfd1);
+    
+    /* Parse default configuration(s) */
+    const char * const *config_paths = xdgSearchableConfigDirectories(NULL);
+    const char * const *path;
+    for (path = config_paths ; *path ; path++) {
+      int dirfd1 = open(*path, O_DIRECTORY);
+      if (dirfd >= 0) {
+        parse_config_at(result, dirfd1, "moberg.conf");
+        int dirfd2 = openat(dirfd1, "moberg.d", O_DIRECTORY);
+        if (dirfd2 >= 0) { 
+          parse_config_dir_at(result, dirfd2);
+          parse_config_dir_at(result, dirfd2);
+          close(dirfd2);
         }
-        free((char*)*path);
+        close(dirfd1);
       }
-      free((const char **)config_paths);
-
-      /* Read environment default */
-      /* Parse environment overrides */
+      free((char*)*path);
     }
+    free((const char **)config_paths);
+    
+    /* Read environment default */
+    /* Parse environment overrides */
   }
+  install_config(result);
   
+err:
   return result;
 }
 

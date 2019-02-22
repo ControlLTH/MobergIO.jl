@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <moberg_config.h>
 #include <moberg_parser.h>
 #include <moberg_module.h>
 #include <moberg_device.h>
@@ -288,23 +289,24 @@ void moberg_parser_failed(
 
 
 static int parse_map_range(context_t *c,
-                           struct moberg_device_map_range *range)
+                           int *min,
+                           int *max)
 {
-  token_t min, max;
+  token_t tok_min, tok_max;
   if (! acceptsym(c, tok_LBRACKET, NULL)) { goto syntax_err; }
-  if (! acceptsym(c, tok_INTEGER, &min)) { goto syntax_err; }
+  if (! acceptsym(c, tok_INTEGER, &tok_min)) { goto syntax_err; }
   if (acceptsym(c, tok_COLON, NULL)) {
-    if (! acceptsym(c, tok_INTEGER, &max)) { goto syntax_err; }
+    if (! acceptsym(c, tok_INTEGER, &tok_max)) { goto syntax_err; }
   } else {
-    max = min;
+    tok_max = tok_min;
   }
   if (! acceptsym(c, tok_RBRACKET, NULL)) { goto syntax_err; }
-  if (! range) {
-    fprintf(stderr, "Range is NULL\n");
+  if (! min && max) {
+    fprintf(stderr, "Min or max is NULL\n");
     goto err;
   }
-  range->min = min.u.integer.value;
-  range->max = max.u.integer.value;
+  *min = tok_min.u.integer.value;
+  *max = tok_max.u.integer.value;
   return 1;
 syntax_err:
   moberg_parser_failed(c, stderr);
@@ -315,17 +317,20 @@ err:
 static int parse_map(context_t *c,
                      struct moberg_device *device)
 {
-  struct moberg_device_map_range range;
+  enum moberg_channel_kind kind;
+  int min, max;
   
-  if (acceptkeyword(c, "analog_in")) { range.kind = map_analog_in; }
-  else if (acceptkeyword(c, "analog_out")) { range.kind = map_analog_out; }
-  else if (acceptkeyword(c, "digital_in")) { range.kind = map_digital_in; }
-  else if (acceptkeyword(c, "digital_out")) { range.kind = map_digital_out; }
-  else if (acceptkeyword(c, "encoder_in")) { range.kind = map_encoder_in; }
+  if (acceptkeyword(c, "analog_in")) { kind = chan_ANALOGIN; }
+  else if (acceptkeyword(c, "analog_out")) { kind = chan_ANALOGOUT; }
+  else if (acceptkeyword(c, "digital_in")) { kind = chan_DIGITALIN; }
+  else if (acceptkeyword(c, "digital_out")) { kind = chan_DIGITALOUT; }
+  else if (acceptkeyword(c, "encoder_in")) { kind = chan_ENCODERIN; }
   else { goto syntax_err; }
-  if (! parse_map_range(c, &range)) { goto syntax_err; }
+  if (! parse_map_range(c, &min, &max)) { goto syntax_err; }
   if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
-  if (! moberg_device_parse_map(device, c, range)) { goto err; }
+  if (! moberg_device_parse_map(device, c->config, c, kind, min, max)) {
+    goto err;
+  }
   if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
   return 1;
 syntax_err:
@@ -341,11 +346,6 @@ static int parse_device(context_t *c,
   for (;;) {
     if (acceptkeyword(c, "config")) {
      moberg_device_parse_config(device, c);
-/*      
-      void *config = driver->module.parse_config(c);
-      result->add_config(config);
-      free(config);
-*/
     } else if (acceptkeyword(c, "map")) {
       if (! parse_map(c, device)) { goto err; }
     } else if (acceptsym(c, tok_RBRACE, NULL)) {
@@ -403,7 +403,7 @@ err:
   return 0;
 }
 
-struct moberg_config *moberg_config_parse(const char *buf)
+struct moberg_config *moberg_parse(const char *buf)
 {
   context_t context;
 

@@ -69,16 +69,16 @@ err:
 static int parse_map(
   struct moberg_device *device,
   struct moberg_parser_context *c,
-  enum moberg_device_map_kind ignore)
+  enum moberg_channel_kind ignore)
 {
-  enum moberg_device_map_kind kind;
+  enum moberg_channel_kind kind;
   token_t min, max;
  
-  if (acceptkeyword(c, "analog_in")) { kind = map_analog_in; }
-  else if (acceptkeyword(c, "analog_out")) { kind = map_analog_out; }
-  else if (acceptkeyword(c, "digital_in")) { kind = map_digital_in; }
-  else if (acceptkeyword(c, "digital_out")) { kind = map_digital_out; }
-  else if (acceptkeyword(c, "encoder_in")) { kind = map_encoder_in; }
+  if (acceptkeyword(c, "analog_in")) { kind = chan_ANALOGIN; }
+  else if (acceptkeyword(c, "analog_out")) { kind = chan_ANALOGOUT; }
+  else if (acceptkeyword(c, "digital_in")) { kind = chan_DIGITALIN; }
+  else if (acceptkeyword(c, "digital_out")) { kind = chan_DIGITALOUT; }
+  else if (acceptkeyword(c, "encoder_in")) { kind = chan_ENCODERIN; }
   else { goto syntax_err; }
   if (! acceptsym(c, tok_LBRACKET, NULL)) { goto syntax_err; }
   if (! acceptsym(c, tok_INTEGER, &min)) { goto syntax_err; }
@@ -90,19 +90,19 @@ static int parse_map(
   if (! acceptsym(c, tok_RBRACKET, NULL)) { goto syntax_err; }
   for (int i = min.u.integer.value ; i <= max.u.integer.value ; i++) {
     switch (kind) {
-      case map_analog_in:
+      case chan_ANALOGIN:
         moberg_device_add_analog_in(device, NULL);
         break;
-      case map_analog_out:
+      case chan_ANALOGOUT:
         moberg_device_add_analog_out(device, NULL);
         break;
-      case map_digital_in:
+      case chan_DIGITALIN:
         moberg_device_add_digital_in(device, NULL);
         break;
-      case map_digital_out:
+      case chan_DIGITALOUT:
         moberg_device_add_digital_out(device, NULL);
         break;
-      case map_encoder_in:
+      case chan_ENCODERIN:
         moberg_device_add_encoder_in(device, NULL);
         break;
     }

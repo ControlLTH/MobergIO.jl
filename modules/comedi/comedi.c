@@ -90,7 +90,7 @@ err:
 static int parse_map(
   struct moberg_device *device,
   struct moberg_parser_context *c,
-  enum moberg_device_map_kind kind)
+  enum moberg_channel_kind kind)
 {
   token_t min, max;
 
@@ -114,19 +114,19 @@ static int parse_map(
     }
     for (int i = min.u.integer.value ; i <= max.u.integer.value ; i++) {
       switch (kind) {
-        case map_analog_in:
+        case chan_ANALOGIN:
           moberg_device_add_analog_in(device, NULL);
           break;
-        case map_analog_out:
+        case chan_ANALOGOUT:
           moberg_device_add_analog_out(device, NULL);
           break;
-        case map_digital_in:
+        case chan_DIGITALIN:
           moberg_device_add_digital_in(device, NULL);
           break;
-        case map_digital_out:
+        case chan_DIGITALOUT:
           moberg_device_add_digital_out(device, NULL);
           break;
-        case map_encoder_in:
+        case chan_ENCODERIN:
           moberg_device_add_encoder_in(device, NULL);
           break;
       }

@@ -47,7 +47,4 @@ clean:
 build/libmoberg.so: build/lib/moberg_config.o
 build/libmoberg.so: build/lib/moberg_device.o
 build/libmoberg.so: build/lib/moberg_parser.o
-build/lib/moberg_device.o: moberg_device.h
-build/parse_config.o: moberg_parser.h
-parse_config: build/moberg_driver.o
-parse_config: build/parse_config.o
+build/lib/%.o: %.h

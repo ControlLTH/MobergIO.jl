@@ -4,16 +4,12 @@
 #include <moberg_config.h>
 #include <moberg_parser.h>
 
-struct moberg_device_map_range {
-  enum moberg_device_map_kind {
-    map_analog_in,
-    map_analog_out,
-    map_digital_in,
-    map_digital_out,
-    map_encoder_in
-  } kind;
-  int min;
-  int max;
+enum moberg_channel_kind {
+    chan_ANALOGIN,
+    chan_ANALOGOUT,
+    chan_DIGITALIN,
+    chan_DIGITALOUT,
+    chan_ENCODERIN
 };
 
 struct moberg_device_analog_in {
@@ -62,7 +58,7 @@ struct moberg_device_driver {
   int (*parse_map)(
     struct moberg_device* device,
     struct moberg_parser_context *context,
-    enum moberg_device_map_kind kind);
+    enum moberg_channel_kind kind);
   int (*config_free)(
     struct moberg_device_config *config);
 };
@@ -80,8 +76,11 @@ int moberg_device_set_config(struct moberg_device* device,
                              struct moberg_device_config *config);
 
 int moberg_device_parse_map(struct moberg_device* device,
+                            struct moberg_config *config,
                             struct moberg_parser_context *context,
-                            struct moberg_device_map_range range);
+                            enum moberg_channel_kind kind,
+                            int min,
+                            int max);
 
 int moberg_device_add_analog_in(struct moberg_device* device,
                                 struct moberg_device_analog_in *channel);
