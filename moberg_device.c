@@ -4,25 +4,26 @@
 #include <dlfcn.h>
 #include <moberg_config.h>
 #include <moberg_device.h>
+#include <moberg_channel.h>
 
 struct moberg_device {
-  void *driver_handle;
   struct moberg_device_driver driver;
-  struct moberg_device_config *device_config;
+  struct moberg_device_context *device_context;
   struct channel_list {
     struct channel_list *next;
     enum moberg_channel_kind kind;
     int index;
     union channel {
-      struct moberg_device_analog_in *analog_in;
-      struct moberg_device_analog_out *analog_out;
-      struct moberg_device_digital_in *digital_in;
-      struct moberg_device_digital_out *digital_out;
-      struct moberg_device_encoder_in *encoder_in;
+      struct moberg_channel_analog_in *analog_in;
+      struct moberg_channel_analog_out *analog_out;
+      struct moberg_channel_digital_in *digital_in;
+      struct moberg_channel_digital_out *digital_out;
+      struct moberg_channel_encoder_in *encoder_in;
+      struct moberg_channel *channel;
     } u;
   } *channel_head, **channel_tail;
   struct map_range {
-    struct moberg_config *config;
+    struct moberg_device *device;
     enum moberg_channel_kind kind;
     int min;
     int max;
@@ -52,15 +53,21 @@ struct moberg_device *moberg_device_new(const char *driver)
     fprintf(stderr, "Could not allocate result for %s\n", name);
     goto dlclose_driver;
   }
-  result->driver_handle = handle;
   result->driver = *device_driver;
-  result->device_config = NULL;
+  result->device_context = result->driver.new(dlclose, handle);
+  if (result->device_context) {
+    result->driver.up(result->device_context);
+  } else {
+    fprintf(stderr, "Could not allocate context for %s\n", name);
+    goto free_result;
+  }
   result->channel_head = NULL;
   result->channel_tail = &result->channel_head;
   result->range = NULL;
-  
   goto free_name;
   
+free_result:
+  free(result);
 dlclose_driver:
   dlclose(handle);
 free_name:
@@ -78,48 +85,15 @@ void moberg_device_free(struct moberg_device *device)
     free(channel);
     channel = next;
   }
-  device->driver.config_free(device->device_config);
-  free(device->device_config);
-  dlclose(device->driver_handle);
+  int use = device->driver.down(device->device_context);
+  fprintf(stderr, "USE: %d\n", use);
   free(device);
 }
 
 int moberg_device_parse_config(struct moberg_device *device,
-                               struct moberg_parser_context *context)
+                               struct moberg_parser_context *parser)
 {
-  return device->driver.parse_config(device, context);
-}
-
-int moberg_device_set_config(struct moberg_device *device,
-                             struct moberg_device_config *config)
-{
-  if (device->device_config) {
-    device->driver.config_free(device->device_config);
-    free(device->device_config);
-  }
-  device->device_config = config;
-  return 1;
-}
-
-int moberg_device_parse_map(struct moberg_device* device,
-                            struct moberg_config *config,
-                            struct moberg_parser_context *context,
-                            enum moberg_channel_kind kind,
-                            int min,
-                            int max)
-{
-  int result;
-  struct map_range r = {
-    .config=config,
-    .kind=kind,
-    .min=min,
-    .max=max
-  };
-  device->range = &r;
-  result = device->driver.parse_map(device, context, kind);
-  device->range = NULL;
-  printf("RRR %d %d\n", r.min, r.max);
-  return result;
+  return device->driver.parse_config(device->device_context, parser);
 }
 
 static int add_channel(struct moberg_device* device,
@@ -141,7 +115,7 @@ err:
 }
 
 int moberg_device_add_analog_in(struct moberg_device* device,
-                                struct moberg_device_analog_in *channel)
+                                struct moberg_channel_analog_in *channel)
 {
   int result = 0;
   
@@ -156,7 +130,7 @@ int moberg_device_add_analog_in(struct moberg_device* device,
 }
                             
 int moberg_device_add_analog_out(struct moberg_device* device,
-                                 struct moberg_device_analog_out *channel)
+                                 struct moberg_channel_analog_out *channel)
 {
   int result = 0;
   
@@ -171,7 +145,7 @@ int moberg_device_add_analog_out(struct moberg_device* device,
 }
                             
 int moberg_device_add_digital_in(struct moberg_device* device,
-                                struct moberg_device_digital_in *channel)
+                                struct moberg_channel_digital_in *channel)
 {
   int result = 0;
   
@@ -186,7 +160,7 @@ int moberg_device_add_digital_in(struct moberg_device* device,
 }
                             
 int moberg_device_add_digital_out(struct moberg_device* device,
-                                 struct moberg_device_digital_out *channel)
+                                 struct moberg_channel_digital_out *channel)
 {
   int result = 0;
   
@@ -201,7 +175,7 @@ int moberg_device_add_digital_out(struct moberg_device* device,
 }
                             
 int moberg_device_add_encoder_in(struct moberg_device* device,
-                                struct moberg_device_encoder_in *channel)
+                                 struct moberg_channel_encoder_in *channel)
 {
   int result = 0;
   
@@ -215,10 +189,112 @@ int moberg_device_add_encoder_in(struct moberg_device* device,
   return result;
 }
 
-int moberg_device_install_channels(struct moberg_device *device,
-                                   struct moberg_install_channels *install)
+static int map(struct moberg_device* device,
+               struct moberg_channel *channel)
 {
+  int result = 0;
+ 
+  if (device->range->kind == channel->kind &&
+      device->range->min <= device->range->max) {
+    printf("XX Mapping %d\n", device->range->min);
+    result = add_channel(device, device->range->kind, device->range->min,
+                         (union channel) { .channel=channel });
+    device->range->min++;
+  }
+  return result;
+  
+}
+
+int moberg_device_parse_map(struct moberg_device* device,
+                            struct moberg_parser_context *parser,
+                            enum moberg_channel_kind kind,
+                            int min,
+                            int max)
+{
+  int result;
+  struct map_range r = {
+    .device=device,
+    .kind=kind,
+    .min=min,
+    .max=max
+  };
+  struct moberg_channel_map map_channel = {
+    .device=device,
+#if 0
+    .analog_in=moberg_device_add_analog_in,
+    .analog_out=moberg_device_add_analog_out,
+    .digital_in=moberg_device_add_digital_in,
+    .digital_out= moberg_device_add_digital_out,
+    .encoder_in= moberg_device_add_encoder_in,
+#endif
+    .map=map
+  };
+  
+  device->range = &r;
+  result = device->driver.parse_map(device->device_context, parser,
+                                    kind, &map_channel);
+  device->range = NULL;
+  printf("RRR %d %d\n", r.min, r.max);
+  return result;
+}
+
+int moberg_device_install_channels(struct moberg_device *device,
+                                   struct moberg_channel_install *install)
+{
+  
   printf("INSTALL\n");
+  struct channel_list *channel = device->channel_head;
+  while (channel) {
+    struct channel_list *next;
+    next = channel->next;
+    install->channel(install->context,
+                     channel->index,
+                     device,
+                     channel->u.channel);
+    switch (channel->kind) {
+      case chan_ANALOGIN: {
+/*
+        install->analog_in(install->context,
+                           channel->index,
+                           device,
+                           channel->u.analog_in);
+*/
+      } break;
+      case chan_ANALOGOUT:  {
+/*
+        install->analog_out(install->context,
+                            channel->index,
+                            device,
+                            channel->u.analog_out);
+*/
+      } break;
+      case chan_DIGITALIN:  {
+/*
+        install->digital_in(install->context,
+                            channel->index,
+                            device,
+                            channel->u.digital_in);
+*/
+      } break;
+      case chan_DIGITALOUT:  {
+/*
+        install->digital_out(install->context,
+                             channel->index,
+                             device,
+                             channel->u.digital_out);
+*/
+      } break;
+      case chan_ENCODERIN: {
+/*
+        install->encoder_in(install->context,
+                            channel->index,
+                            device,
+                            channel->u.encoder_in);
+*/
+      } break;
+    }
+    channel = next;
+  }
   return 1;
 }
 

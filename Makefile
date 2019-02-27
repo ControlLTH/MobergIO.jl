@@ -3,7 +3,8 @@ CCFLAGS+=-Wall -Werror -I$(shell pwd) -g
 LDFLAGS+=-L$(shell pwd)/build/ -lmoberg
 MODULES:=$(wildcard modules/*)
 export CCFLAGS LDFLAGS
-LDFLAGS_parse_config=-ldl -export-dynamic
+LDFLAGS_parse_config=-ldl
+#-export-dynamic
 
 all: $(LIBRARIES:%=build/%) $(MODULES) 
 	echo $(MODULES)

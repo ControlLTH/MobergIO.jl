@@ -15,33 +15,6 @@ int moberg_config_add_device(struct moberg_config *config,
                              struct moberg_device *device);
 
 int moberg_config_install_channels(struct moberg_config *config,
-                                   struct moberg_install_channels *install);
-
-#if 0
-int moberg_config_add_analog_in(struct moberg_config *config,
-                                int index,
-                                struct moberg_device* device,
-                                struct moberg_device_analog_in *channel);
-                            
-int moberg_config_add_analog_out(struct moberg_config *config,
-                                 int index,
-                                 struct moberg_device* device,
-                                 struct moberg_device_analog_out *channel);
-                            
-int moberg_config_add_digital_in(struct moberg_config *config,
-                                 int index,
-                                 struct moberg_device* device,
-                                 struct moberg_device_digital_in *channel);
-                            
-int moberg_config_add_digital_out(struct moberg_config *config,
-                                  int index,
-                                  struct moberg_device* device,
-                                  struct moberg_device_digital_out *channel);
-                            
-int moberg_config_add_encoder_in(struct moberg_config *config,
-                                 int index,
-                                 struct moberg_device* device,
-                                 struct moberg_device_encoder_in *channel);
-# endif
+                                   struct moberg_channel_install *install);
 
 #endif

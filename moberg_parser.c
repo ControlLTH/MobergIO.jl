@@ -328,7 +328,7 @@ static int parse_map(context_t *c,
   else { goto syntax_err; }
   if (! parse_map_range(c, &min, &max)) { goto syntax_err; }
   if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
-  if (! moberg_device_parse_map(device, c->config, c, kind, min, max)) {
+  if (! moberg_device_parse_map(device, c, kind, min, max)) {
     goto err;
   }
   if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }

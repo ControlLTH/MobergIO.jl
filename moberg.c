@@ -14,18 +14,65 @@
 #include <moberg_config.h>
 #include <moberg_parser.h>
 
-struct moberg_digital_in_t {
-  int index;
-  char *driver;
-};
+static struct deferred_action {
+  struct deferred_action *next;
+  int (*action)(void *param);
+  void *param;
+} *deferred_action = NULL;
 
 struct moberg {
   struct moberg_config *config;
-  struct {
-    int count;
-    struct moberg_digital_in_t *value;
-  } digital_in;
+  struct channel_list {
+    int capacity;
+    struct moberg_channel **value;
+  } analog_in, analog_out, digital_in, digital_out, encoder_in;
 };
+
+static int channel_list_set(struct channel_list *list,
+                            int index,
+                            struct moberg_channel *value)
+{
+  if (list->capacity <= index) {
+    int capacity;
+    for (capacity = 2 ; capacity <= index ; capacity *= 2);
+    void *new = realloc(list->value, capacity * sizeof(**list->value));
+    if (!new) {
+      goto err;
+    }
+    void *p = new + list->capacity * sizeof(*list->value);
+    memset(p, 0, (capacity - list->capacity) * sizeof(**list->value));
+    list->value = new;
+    list->capacity = capacity;
+  }
+
+  if (0 <= index && index < list->capacity) {
+    list->value[index] = value;
+    return 1;
+  }
+err:
+  return 0;
+}
+                                   
+static int channel_list_get(struct channel_list *list,
+                            int index,
+                            struct moberg_channel **value)
+{
+  if (0 <= index && index < list->capacity) {
+    *value = list->value[index];
+    return 1;
+  }
+  return 0;
+}
+
+static void channel_list_free(struct channel_list *list)
+{
+  for (int i = 0 ; i < list->capacity ; i++) {
+    if (list->value[i]) {
+      list->value[i]->down(list->value[i]);
+    }
+  }
+  free(list->value);
+}
 
 static void parse_config_at(
   struct moberg *moberg,
@@ -88,12 +135,77 @@ static void parse_config_dir_at(
   
 }
 
+static int install_channel(struct moberg *moberg,
+                           int index,
+                           struct moberg_device* device,
+                           struct moberg_channel *channel)
+{
+  fprintf(stderr, "CHAN %p %d %d\n", channel, channel->kind, index);
+  if (channel) {
+    struct moberg_channel *old = NULL;
+    switch (channel->kind) {
+      case chan_ANALOGIN:
+        channel_list_get(&moberg->analog_in, index, &old);
+        break;
+      case chan_ANALOGOUT:
+        channel_list_get(&moberg->analog_out, index, &old);
+        break;
+      case chan_DIGITALIN:
+        channel_list_get(&moberg->digital_in, index, &old);
+        break;
+      case chan_DIGITALOUT:
+        channel_list_get(&moberg->digital_out, index, &old);
+        break;
+      case chan_ENCODERIN:
+        channel_list_get(&moberg->encoder_in, index, &old);
+        break;
+    }
+    if (old) {
+      old->down(old);
+    }
+    channel->up(channel);
+    /* TODO: Clean up old channel */
+    switch (channel->kind) {
+      case chan_ANALOGIN:
+        if (! channel_list_set(&moberg->analog_in, index, channel)) {
+          goto err;
+        }
+        break;
+      case chan_ANALOGOUT:
+        if (! channel_list_set(&moberg->analog_out, index, channel)) {
+          goto err;
+        }
+        break;
+      case chan_DIGITALIN:
+        if (! channel_list_set(&moberg->digital_in, index, channel)) {
+          goto err;
+        }
+        break;
+      case chan_DIGITALOUT:
+        if (! channel_list_set(&moberg->digital_out, index, channel)) {
+          goto err;
+        }
+        break;
+      case chan_ENCODERIN:
+        if (! channel_list_set(&moberg->encoder_in, index, channel)) {
+          goto err;
+        }
+        break;
+    }
+  }
+  return 1;
+err:
+  return 0;
+}
+
 static int install_config(struct moberg *moberg)
 {
-  struct moberg_install_channels install = {
-    .context=moberg
+  struct moberg_channel_install install = {
+    .context=moberg,
+    .channel=install_channel
   };
   return moberg_config_install_channels(moberg->config, &install);
+  /* TODO cleanup unused devices...*/
 }
 
 struct moberg *moberg_new(
@@ -104,6 +216,16 @@ struct moberg *moberg_new(
     fprintf(stderr, "Failed to allocate moberg struct\n");
     goto err;
   }
+  result->analog_in.capacity = 0;
+  result->analog_in.value = NULL;
+  result->analog_out.capacity = 0;
+  result->analog_out.value = NULL;
+  result->digital_in.capacity = 0;
+  result->digital_in.value = NULL;
+  result->digital_out.capacity = 0;
+  result->digital_out.value = NULL;
+  result->encoder_in.capacity = 0;
+  result->encoder_in.value = NULL;
   if (config) {
     result->config = config;
   } else {
@@ -118,7 +240,6 @@ struct moberg *moberg_new(
         parse_config_at(result, dirfd1, "moberg.conf");
         int dirfd2 = openat(dirfd1, "moberg.d", O_DIRECTORY);
         if (dirfd2 >= 0) { 
-          parse_config_dir_at(result, dirfd2);
           parse_config_dir_at(result, dirfd2);
           close(dirfd2);
         }
@@ -141,7 +262,19 @@ void moberg_free(struct moberg *moberg)
 {
   if (moberg) {
     moberg_config_free(moberg->config);
+    channel_list_free(&moberg->analog_in);
+    channel_list_free(&moberg->analog_out);
+    channel_list_free(&moberg->digital_in);
+    channel_list_free(&moberg->digital_out);
+    channel_list_free(&moberg->encoder_in);
     free(moberg);
+  }
+  while (deferred_action) {
+    fprintf(stderr, "RUNNING deferred\n");
+    struct deferred_action *deferred = deferred_action;
+    deferred_action = deferred_action->next;
+    deferred->action(deferred->param);
+    free(deferred);
   }
 }
 
@@ -160,3 +293,16 @@ enum moberg_status moberg_stop(
   return moberg_OK;
 }
 
+void moberg_deferred_action(
+  int (*action)(void *param),
+  void *param)
+{
+  struct deferred_action *deferred = malloc(sizeof(*deferred));
+  if (deferred) {
+    fprintf(stderr, "DEFERRED %p %p\n", action, param);
+    deferred->next = deferred_action;
+    deferred->action = action;
+    deferred->param = param;
+    deferred_action = deferred;
+  }
+}

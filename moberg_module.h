@@ -55,4 +55,8 @@ void moberg_parser_failed(
   struct moberg_parser_context *c,
   FILE *f);
 
+void moberg_deferred_action(
+  int (*action)(void *param),
+  void *param);
+
 #endif
