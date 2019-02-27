@@ -90,6 +90,14 @@ void moberg_device_free(struct moberg_device *device)
   free(device);
 }
 
+int moberg_device_in_use(struct moberg_device *device)
+{
+  device->driver.up(device->device_context);
+  int use = device->driver.down(device->device_context);
+  fprintf(stderr, "IN_USE: %d\n", use);
+  return use > 1;
+}
+
 int moberg_device_parse_config(struct moberg_device *device,
                                struct moberg_parser_context *parser)
 {

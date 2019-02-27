@@ -35,6 +35,8 @@ struct moberg_device *moberg_device_new(const char *driver);
 
 void moberg_device_free(struct moberg_device *device);
 
+int moberg_device_in_use(struct moberg_device *device);
+
 int moberg_device_parse_config(struct moberg_device* device,
                                struct moberg_parser_context *context);
 

@@ -14,12 +14,6 @@
 #include <moberg_config.h>
 #include <moberg_parser.h>
 
-static struct deferred_action {
-  struct deferred_action *next;
-  int (*action)(void *param);
-  void *param;
-} *deferred_action = NULL;
-
 struct moberg {
   struct moberg_config *config;
   struct channel_list {
@@ -27,6 +21,23 @@ struct moberg {
     struct moberg_channel **value;
   } analog_in, analog_out, digital_in, digital_out, encoder_in;
 };
+
+static struct deferred_action {
+  struct deferred_action *next;
+  int (*action)(void *param);
+  void *param;
+} *deferred_action = NULL;
+
+static void run_deferred_actions()
+{
+  while (deferred_action) {
+    fprintf(stderr, "RUNNING deferred\n");
+    struct deferred_action *deferred = deferred_action;
+    deferred_action = deferred_action->next;
+    deferred->action(deferred->param);
+    free(deferred);
+  }
+}
 
 static int channel_list_set(struct channel_list *list,
                             int index,
@@ -253,6 +264,7 @@ struct moberg *moberg_new(
     /* Parse environment overrides */
   }
   install_config(result);
+  run_deferred_actions();
   
 err:
   return result;
@@ -269,13 +281,7 @@ void moberg_free(struct moberg *moberg)
     channel_list_free(&moberg->encoder_in);
     free(moberg);
   }
-  while (deferred_action) {
-    fprintf(stderr, "RUNNING deferred\n");
-    struct deferred_action *deferred = deferred_action;
-    deferred_action = deferred_action->next;
-    deferred->action(deferred->param);
-    free(deferred);
-  }
+  run_deferred_actions();
 }
 
 enum moberg_status moberg_start(

@@ -76,6 +76,21 @@ int moberg_config_install_channels(struct moberg_config *config,
   for (struct device_entry *d = config->device_head ; d ; d = d->next) {
     result &= moberg_device_install_channels(d->device, install);
   }
+  struct device_entry *device = config->device_head;
+  struct device_entry **previous = &config->device_head;
+  while (device) {
+    struct device_entry *next = device->next;
+    if (moberg_device_in_use(device->device)) {
+      previous = &device->next;
+    } else {
+      fprintf(stderr, "FREE\n");
+      moberg_device_free(device->device);
+      free(device);
+      *previous = next;
+    }
+    device = next;
+  }
+
   return result;
 }
 
