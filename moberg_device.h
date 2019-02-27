@@ -18,6 +18,7 @@ struct moberg_device_driver {
   /* Use-count of device, when it reaches zero, device will be free'd */
   int (*up)(struct moberg_device_context *context);
   int (*down)(struct moberg_device_context *context);
+
   /* Parse driver dependent parts of config file */
   int (*parse_config)(
     struct moberg_device_context *device,
@@ -27,6 +28,15 @@ struct moberg_device_driver {
     struct moberg_parser_context *parser,
     enum moberg_channel_kind kind,
     struct moberg_channel_map *map);
+
+  /* Shell commands for starting and stopping */
+  int (*start)(
+    struct moberg_device_context *device,
+    FILE *f);
+  int (*stop)(
+    struct moberg_device_context *device,
+    FILE *f);
+  
 };
 
 struct moberg_device;
@@ -48,6 +58,14 @@ int moberg_device_parse_map(struct moberg_device* device,
 
 int moberg_device_install_channels(struct moberg_device *device,
                                    struct moberg_channel_install *install);
+
+int moberg_device_start(struct moberg_device *device,
+                        FILE *f);
+
+int moberg_device_stop(struct moberg_device *device,
+                       FILE *f);
+
+
 
 
 #endif

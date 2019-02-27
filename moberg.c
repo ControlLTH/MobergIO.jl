@@ -31,7 +31,6 @@ static struct deferred_action {
 static void run_deferred_actions()
 {
   while (deferred_action) {
-    fprintf(stderr, "RUNNING deferred\n");
     struct deferred_action *deferred = deferred_action;
     deferred_action = deferred_action->next;
     deferred->action(deferred->param);
@@ -288,6 +287,7 @@ enum moberg_status moberg_start(
   struct moberg *moberg,
   FILE *f)
 {
+  return moberg_config_start(moberg->config, f);
   return moberg_OK;
 }
 
@@ -296,6 +296,7 @@ enum moberg_status moberg_stop(
   struct moberg *moberg,
   FILE *f)
 {
+  return moberg_config_stop(moberg->config, f);
   return moberg_OK;
 }
 
@@ -305,7 +306,6 @@ void moberg_deferred_action(
 {
   struct deferred_action *deferred = malloc(sizeof(*deferred));
   if (deferred) {
-    fprintf(stderr, "DEFERRED %p %p\n", action, param);
     deferred->next = deferred_action;
     deferred->action = action;
     deferred->param = param;

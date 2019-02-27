@@ -36,8 +36,7 @@ struct moberg_parser_integer {
 struct moberg_parser_token {
   enum moberg_parser_token_kind kind;
   union {
-    struct moberg_parser_ident ident;
-    struct moberg_parser_ident string;
+    struct moberg_parser_ident idstr;
     struct moberg_parser_integer integer;
   } u;
 };

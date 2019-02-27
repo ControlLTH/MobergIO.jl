@@ -44,8 +44,8 @@ static inline int acceptkeyword(context_t *c,
 static const void nextsym_ident(context_t *c)
 {
   c->token.kind = tok_IDENT;
-  c->token.u.ident.length = 1;
-  c->token.u.ident.value = c->p;
+  c->token.u.idstr.length = 1;
+  c->token.u.idstr.value = c->p;
   c->p++;
   while (*c->p) {
     switch (*c->p) {
@@ -54,7 +54,7 @@ static const void nextsym_ident(context_t *c)
       case '0'...'9':
       case '_':
         c->p++;
-        c->token.u.ident.length++;
+        c->token.u.idstr.length++;
         break;
       default:
         return;
@@ -77,15 +77,15 @@ static const void nextsym_string(context_t *c)
 {
   c->token.kind = tok_STRING;
   c->p++;
-  c->token.u.string.value = c->p;
-  c->token.u.string.length = 0;
+  c->token.u.idstr.value = c->p;
+  c->token.u.idstr.length = 0;
   while (*c->p && *c->p != '"') {
     if (*c->p == '\\') {
-      c->token.u.string.length++;
+      c->token.u.idstr.length++;
       c->p++;
     }
     if (*c->p) {
-      c->token.u.string.length++;
+      c->token.u.idstr.length++;
       c->p++;
     }
   }
@@ -235,7 +235,7 @@ int moberg_parser_acceptkeyword(context_t *c,
 {
   token_t t;
   if (peeksym(c, tok_IDENT, &t) &&
-      strncmp(keyword, t.u.ident.value, t.u.ident.length) == 0) {
+      strncmp(keyword, t.u.idstr.value, t.u.idstr.length) == 0) {
     nextsym(c);
     c->expected.n = 0;
     return 1;
@@ -277,11 +277,11 @@ void moberg_parser_failed(
       break;
     case tok_IDENT:
       fprintf(f, "%.*s (<IDENT>)",
-              c->token.u.ident.length, c->token.u.ident.value);
+              c->token.u.idstr.length, c->token.u.idstr.value);
       break;
     case tok_STRING:
       fprintf(f, "\"%.*s'\" (<STRING>)",
-              c->token.u.string.length, c->token.u.string.value);
+              c->token.u.idstr.length, c->token.u.idstr.value);
       break;
   }
   fprintf(f, "\n%s\n", c->p);
@@ -375,10 +375,10 @@ static int parse(context_t *c)
       if (! acceptsym(c, tok_IDENT, &t)) { goto syntax_err; }
       if (! acceptsym(c, tok_RPAREN, NULL)) { goto syntax_err; }
 
-      char *name = strndup(t.u.ident.value, t.u.ident.length);
+      char *name = strndup(t.u.idstr.value, t.u.idstr.length);
       if (! name) {
         fprintf(stderr, "Failed to allocate driver name '%.*s'\n",
-                t.u.ident.length, t.u.ident.value);
+                t.u.idstr.length, t.u.idstr.value);
         goto err;
       }
       device = moberg_device_new(name);

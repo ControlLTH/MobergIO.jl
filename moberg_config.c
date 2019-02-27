@@ -94,4 +94,21 @@ int moberg_config_install_channels(struct moberg_config *config,
   return result;
 }
 
+int moberg_config_start(struct moberg_config *config,
+                        FILE *f)
+{
+  for (struct device_entry *d = config->device_head ; d ; d = d->next) {
+    moberg_device_start(d->device, f);
+  }
+  return 1;
+}
 
+
+int moberg_config_stop(struct moberg_config *config,
+                       FILE *f)
+{
+  for (struct device_entry *d = config->device_head ; d ; d = d->next) {
+    moberg_device_stop(d->device, f);
+  }
+  return 1;
+}

@@ -145,7 +145,7 @@ static int parse_config(
       if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
       if (! acceptsym(c, tok_STRING, &name)) { goto syntax_err; }
       if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
-      device->name = strndup(name.u.string.value, name.u.string.length);
+      device->name = strndup(name.u.idstr.value, name.u.idstr.length);
     } else if (acceptkeyword(c, "baud")) {
       token_t baud;
       if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
@@ -275,10 +275,24 @@ syntax_err:
   return 0;
 }
 
+static int start(struct moberg_device_context *device,
+                 FILE *f)
+{
+  return 1;
+}
+
+static int stop(struct moberg_device_context *device,
+                 FILE *f)
+{
+  return 1;
+}
+
 struct moberg_device_driver moberg_device_driver = {
   .new=new_context,
   .up=device_up,
   .down=device_down,
   .parse_config=parse_config,
   .parse_map=parse_map,
+  .start=start,
+  .stop=stop
 };

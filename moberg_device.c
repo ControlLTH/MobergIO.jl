@@ -228,13 +228,6 @@ int moberg_device_parse_map(struct moberg_device* device,
   };
   struct moberg_channel_map map_channel = {
     .device=device,
-#if 0
-    .analog_in=moberg_device_add_analog_in,
-    .analog_out=moberg_device_add_analog_out,
-    .digital_in=moberg_device_add_digital_in,
-    .digital_out= moberg_device_add_digital_out,
-    .encoder_in= moberg_device_add_encoder_in,
-#endif
     .map=map
   };
   
@@ -259,50 +252,19 @@ int moberg_device_install_channels(struct moberg_device *device,
                      channel->index,
                      device,
                      channel->u.channel);
-    switch (channel->kind) {
-      case chan_ANALOGIN: {
-/*
-        install->analog_in(install->context,
-                           channel->index,
-                           device,
-                           channel->u.analog_in);
-*/
-      } break;
-      case chan_ANALOGOUT:  {
-/*
-        install->analog_out(install->context,
-                            channel->index,
-                            device,
-                            channel->u.analog_out);
-*/
-      } break;
-      case chan_DIGITALIN:  {
-/*
-        install->digital_in(install->context,
-                            channel->index,
-                            device,
-                            channel->u.digital_in);
-*/
-      } break;
-      case chan_DIGITALOUT:  {
-/*
-        install->digital_out(install->context,
-                             channel->index,
-                             device,
-                             channel->u.digital_out);
-*/
-      } break;
-      case chan_ENCODERIN: {
-/*
-        install->encoder_in(install->context,
-                            channel->index,
-                            device,
-                            channel->u.encoder_in);
-*/
-      } break;
-    }
     channel = next;
   }
   return 1;
 }
 
+int moberg_device_start(struct moberg_device *device,
+                        FILE *f)
+{
+  return device->driver.start(device->device_context, f);
+}
+
+int moberg_device_stop(struct moberg_device *device,
+                       FILE *f)
+{
+  return device->driver.stop(device->device_context, f);
+}
