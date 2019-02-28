@@ -11,6 +11,7 @@ typedef struct moberg_parser_token token_t;
 typedef struct moberg_parser_context context_t;
 
 struct moberg_device_context {
+  struct moberg *moberg;
   int (*dlclose)(void *dlhandle);
   void *dlhandle;
   int use_count;
@@ -49,13 +50,14 @@ struct moberg_channel_encoder_in {
   struct moberg_channel_context channel_context;
 };
 
-static struct moberg_device_context *new_context(
-  int (*dlclose)(void *dlhandle),
-  void *dlhandle)
+static struct moberg_device_context *new_context(struct moberg *moberg,
+                                                 int (*dlclose)(void *dlhandle),
+                                                 void *dlhandle)
 {
   struct moberg_device_context *result = malloc(sizeof(*result));
   if (result) {
     memset(result, 0, sizeof(*result));
+    result->moberg = moberg;
     result->dlclose = dlclose;
     result->dlhandle = dlhandle;
   }
@@ -72,7 +74,8 @@ static int device_down(struct moberg_device_context *context)
 {
   context->use_count--;
   if (context->use_count <= 0) {
-    moberg_deferred_action(context->dlclose, context->dlhandle);
+    moberg_deferred_action(context->moberg,
+                           context->dlclose, context->dlhandle);
     free(context->name);
     free(context);
     return 0;

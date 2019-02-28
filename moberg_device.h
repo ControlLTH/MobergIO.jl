@@ -13,7 +13,8 @@ struct moberg_parser_context;
 
 struct moberg_device_driver {
   /* Create new device context */
-  struct moberg_device_context *(*new)(int (*dlclose)(void *dlhandle),
+  struct moberg_device_context *(*new)(struct moberg *moberg,
+                                       int (*dlclose)(void *dlhandle),
                                        void *dlhandle);
   /* Use-count of device, when it reaches zero, device will be free'd */
   int (*up)(struct moberg_device_context *context);
@@ -41,7 +42,8 @@ struct moberg_device_driver {
 
 struct moberg_device;
 
-struct moberg_device *moberg_device_new(const char *driver);
+struct moberg_device *moberg_device_new(struct moberg *moberg,
+                                        const char *driver);
 
 void moberg_device_free(struct moberg_device *device);
 

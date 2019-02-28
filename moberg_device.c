@@ -30,7 +30,8 @@ struct moberg_device {
   } *range;
 };
 
-struct moberg_device *moberg_device_new(const char *driver)
+struct moberg_device *moberg_device_new(struct moberg *moberg,
+                                        const char *driver)
 {
   struct moberg_device *result = NULL;
 
@@ -54,7 +55,7 @@ struct moberg_device *moberg_device_new(const char *driver)
     goto dlclose_driver;
   }
   result->driver = *device_driver;
-  result->device_context = result->driver.new(dlclose, handle);
+  result->device_context = result->driver.new(moberg, dlclose, handle);
   if (result->device_context) {
     result->driver.up(result->device_context);
   } else {

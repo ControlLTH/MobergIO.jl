@@ -13,6 +13,7 @@
 #include <moberg.h>
 #include <moberg_config.h>
 #include <moberg_parser.h>
+#include <moberg_module.h>
 
 struct moberg {
   struct moberg_config *config;
@@ -20,19 +21,19 @@ struct moberg {
     int capacity;
     struct moberg_channel **value;
   } analog_in, analog_out, digital_in, digital_out, encoder_in;
+  struct deferred_action {
+    struct deferred_action *next;
+    int (*action)(void *param);
+    void *param;
+  } *deferred_action;
+
 };
 
-static struct deferred_action {
-  struct deferred_action *next;
-  int (*action)(void *param);
-  void *param;
-} *deferred_action = NULL;
-
-static void run_deferred_actions()
+static void run_deferred_actions(struct moberg *moberg)
 {
-  while (deferred_action) {
-    struct deferred_action *deferred = deferred_action;
-    deferred_action = deferred_action->next;
+  while (moberg->deferred_action) {
+    struct deferred_action *deferred = moberg->deferred_action;
+    moberg->deferred_action = deferred->next;
     deferred->action(deferred->param);
     free(deferred);
   }
@@ -100,7 +101,7 @@ static void parse_config_at(
             buf[statbuf.st_size] = 0;
           }
           printf("Parsing... %s %d %d\n", pathname, dirfd, fd);
-          struct moberg_config *config = moberg_parse(buf);
+          struct moberg_config *config = moberg_parse(moberg, buf);
           printf("-> %p\n", config);
           if (config) {
             if (! moberg->config) {
@@ -236,6 +237,7 @@ struct moberg *moberg_new(
   result->digital_out.value = NULL;
   result->encoder_in.capacity = 0;
   result->encoder_in.value = NULL;
+  result->deferred_action = NULL;
   if (config) {
     result->config = config;
   } else {
@@ -263,7 +265,7 @@ struct moberg *moberg_new(
     /* Parse environment overrides */
   }
   install_config(result);
-  run_deferred_actions();
+  run_deferred_actions(result);
   
 err:
   return result;
@@ -278,37 +280,72 @@ void moberg_free(struct moberg *moberg)
     channel_list_free(&moberg->digital_in);
     channel_list_free(&moberg->digital_out);
     channel_list_free(&moberg->encoder_in);
+    run_deferred_actions(moberg);
     free(moberg);
   }
-  run_deferred_actions();
 }
 
-enum moberg_status moberg_start(
+/* Input/output */
+
+int moberg_analog_in_open(struct moberg *moberg,
+                          int index,
+                          struct moberg_analog_in *analog_in)
+{
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->analog_in, index, &channel);
+  if (channel) {
+    printf("Call open\n");
+    channel->open(channel);
+    channel->up(channel);
+    *analog_in = channel->action.analog_in;
+    return 1;
+  }
+  return 0;
+}
+
+int moberg_analog_in_close(struct moberg *moberg,
+                           int index,
+                           struct moberg_analog_in analog_in)
+{
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->analog_in, index, &channel);
+  if (channel && channel->action.analog_in.context == analog_in.context) {
+    printf("Call close\n");
+    channel->close(channel);
+    channel->down(channel);
+  }
+  return 1;
+}
+
+
+
+/* System init functionality (systemd/init/...) */
+
+int moberg_start(
   struct moberg *moberg,
   FILE *f)
 {
   return moberg_config_start(moberg->config, f);
-  return moberg_OK;
 }
 
-
-enum moberg_status moberg_stop(
+int moberg_stop(
   struct moberg *moberg,
   FILE *f)
 {
   return moberg_config_stop(moberg->config, f);
-  return moberg_OK;
 }
 
-void moberg_deferred_action(
-  int (*action)(void *param),
-  void *param)
+/* Intended for final cleanup actions (dlclose so far...) */
+
+void moberg_deferred_action(struct moberg *moberg,
+                            int (*action)(void *param),
+                            void *param)
 {
   struct deferred_action *deferred = malloc(sizeof(*deferred));
   if (deferred) {
-    deferred->next = deferred_action;
+    deferred->next = moberg->deferred_action;
     deferred->action = action;
     deferred->param = param;
-    deferred_action = deferred;
+    moberg->deferred_action = deferred;
   }
 }

@@ -361,7 +361,8 @@ err:
   return 0;
 }
 
-static int parse(context_t *c)
+static int parse(struct moberg *moberg,
+                 context_t *c)
 {
   for (;;) {
     if (acceptsym(c, tok_EOF, NULL)) {
@@ -381,18 +382,20 @@ static int parse(context_t *c)
                 t.u.idstr.length, t.u.idstr.value);
         goto err;
       }
-      device = moberg_device_new(name);
+      device = moberg_device_new(moberg, name);
       free(name);
       if (! device) { goto err; }
 
       if (! parse_device(c, device)) {
-        moberg_device_free(device);
-        goto err;
+        goto device_free;
       }
       if (! moberg_config_add_device(c->config, device)) {
-        moberg_device_free(device);
-        goto err;
+        goto device_free;
       }
+      continue;
+    device_free:
+      moberg_device_free(device);      
+      goto err;
     }
   }
   return 1;
@@ -403,7 +406,8 @@ err:
   return 0;
 }
 
-struct moberg_config *moberg_parse(const char *buf)
+struct moberg_config *moberg_parse(struct moberg *moberg,
+                                   const char *buf)
 {
   context_t context;
 
@@ -413,7 +417,7 @@ struct moberg_config *moberg_parse(const char *buf)
     context.buf = buf;
     context.p = context.buf;
     nextsym(&context);
-    if (! parse(&context)) {
+    if (! parse(moberg, &context)) {
       moberg_config_free(context.config);
       context.config = NULL;
     }

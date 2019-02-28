@@ -6,46 +6,54 @@
 struct moberg;
 struct moberg_config;
 
-enum moberg_status { moberg_OK };
+/* Creation & free */
 
 struct moberg *moberg_new(struct moberg_config *config);
 
 void moberg_free(struct moberg *moberg);
 
-/* Input/output functions */
+/* Input/output */
 
-enum moberg_status moberg_analog_in(
-  double *value,
-  struct moberg *moberg,
-  int channel);
+struct moberg_analog_in {
+  struct moberg_channel_analog_in *context;
+  int (*read)(struct moberg_channel_analog_in *, double *value);
+};
 
-enum moberg_status moberg_analog_out(
-  double value,
-  struct moberg *moberg,
-  int channel);
+struct moberg_analog_out {
+  struct moberg_channel_analog_out *context;
+  int (*write)(struct moberg_channel_analog_in *, double value);
+};
 
-enum moberg_status moberg_digital_in(
-  int *value,
-  struct moberg *moberg,
-  int channel);
+struct moberg_digital_in {
+  struct moberg_channel_digital_in *context;
+  int (*read)(struct moberg_channel_digital_in *, int *value);
+};
 
-enum moberg_status moberg_digital_out(
-  int value,
-  struct moberg *moberg,
-  int channel);
+struct moberg_digital_out {
+  struct moberg_channel_digital_out *context;
+  int (*write)(struct moberg_channel_digital_out *, int value);
+};
 
-enum moberg_status moberg_encoder_in(
-  long *value,
-  struct moberg *moberg,
-  int channel);
+struct moberg_encoder_in {
+  struct moberg_channel_encoder_in *context;
+  int (*read)(struct moberg_channel_encoder_in *, long *value);
+};
 
-/* Install functionality */
+int moberg_analog_in_open(struct moberg *moberg,
+                          int index,
+                          struct moberg_analog_in *analog_in);
 
-enum moberg_status moberg_start(
+int moberg_analog_in_close(struct moberg *moberg,
+                           int index,
+                           struct moberg_analog_in analog_in);
+
+/* System init functionality (systemd/init/...) */
+
+int moberg_start(
   struct moberg *moberg,
   FILE *f);
 
-enum moberg_status moberg_stop(
+int moberg_stop(
   struct moberg *moberg,
   FILE *f);
 

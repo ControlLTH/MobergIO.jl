@@ -44,6 +44,7 @@ test: all
 clean:
 	find build -type f -delete
 	rm -f *~
+	make -C test clean
 
 build/libmoberg.so: build/lib/moberg_config.o
 build/libmoberg.so: build/lib/moberg_device.o

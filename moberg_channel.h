@@ -25,26 +25,11 @@ struct moberg_channel {
   /* I/O operations */
   enum moberg_channel_kind kind;
   union moberg_channel_action {
-    struct {
-      struct moberg_channel_analog_in *context;
-      int (*read)(struct moberg_channel_analog_in *, double *value);
-    } analog_in;
-    struct  {
-      struct moberg_channel_analog_out *context;
-      int (*write)(struct moberg_channel_context *, double value);
-    } analog_out;
-    struct {
-      struct moberg_channel_digital_in *context;
-      int (*read)(struct moberg_channel_context *, int *value);
-    } digital_in;
-    struct  {
-      struct moberg_channel_digital_out *context;
-      int (*write)(struct moberg_channel_context *, int value);
-    } digital_out;
-    struct {
-      struct moberg_channel_encoder_in *context;
-      int (*read)(struct moberg_channel_context *, long *value);
-    } encoder_in;
+    struct moberg_analog_in analog_in;
+    struct moberg_analog_out analog_out;
+    struct moberg_digital_in digital_in;
+    struct moberg_digital_out digital_out;
+    struct moberg_encoder_in encoder_in;
   } action;
 };
   
