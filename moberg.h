@@ -21,7 +21,7 @@ struct moberg_analog_in {
 
 struct moberg_analog_out {
   struct moberg_channel_analog_out *context;
-  int (*write)(struct moberg_channel_analog_in *, double value);
+  int (*write)(struct moberg_channel_analog_out *, double value);
 };
 
 struct moberg_digital_in {

@@ -73,16 +73,91 @@ struct moberg_channel_encoder_in {
 static int analog_in_read(struct moberg_channel_analog_in *analog_in,
                           double *value)
 {
+  if (! value) { goto err; }
   struct channel_descriptor descriptor = analog_in->channel_context.descriptor;
   lsampl_t data;
   comedi_data_read(analog_in->channel_context.device->comedi.handle,
                    descriptor.subdevice,
                    descriptor.subchannel,
                    0, 0, &data);
-        
   *value = descriptor.min + data * descriptor.delta;
-  fprintf(stderr, "Data: %d %f\n", data, *value);
   return 1;
+err:
+  return 0;
+}
+
+static int analog_out_write(struct moberg_channel_analog_out *analog_out,
+                            double value)
+{
+  if (! value) { goto err; }
+  struct channel_descriptor descriptor = analog_out->channel_context.descriptor;
+  lsampl_t data;
+  if (value < descriptor.min) {
+    data = 0;
+  } else if (value > descriptor.max) {
+    data = descriptor.maxdata;
+  } else {
+    data = (value - descriptor.min) / descriptor.delta;
+  }
+  if (data < 0) {
+    data = 0;
+  } else if (data > descriptor.maxdata) {
+    data = descriptor.maxdata;
+  }
+  comedi_data_write(analog_out->channel_context.device->comedi.handle,
+                   descriptor.subdevice,
+                   descriptor.subchannel,
+                   0, 0, data);
+  return 1;
+err:
+  return 0;
+}
+
+static int digital_in_read(struct moberg_channel_digital_in *digital_in,
+                           int *value)
+{
+  if (! value) { goto err; }
+  struct channel_descriptor descriptor = digital_in->channel_context.descriptor;
+  lsampl_t data;
+  comedi_data_read(digital_in->channel_context.device->comedi.handle,
+                   descriptor.subdevice,
+                   descriptor.subchannel,
+                   0, 0, &data);
+  *value = data;
+  return 1;
+err:
+  return 0;
+}
+
+static int digital_out_write(struct moberg_channel_digital_out *digital_out,
+                             int value)
+{
+  if (! value) { goto err; }
+  struct channel_descriptor descriptor = digital_out->channel_context.descriptor;
+  lsampl_t data = value==0?0:1;
+  comedi_data_write(digital_out->channel_context.device->comedi.handle,
+                   descriptor.subdevice,
+                   descriptor.subchannel,
+                   0, 0, data);
+  return 1;
+err:
+  return 0;
+}
+
+static int encoder_in_read(struct moberg_channel_encoder_in *encoder_in,
+                           long *value)
+{
+  if (! value) { goto err; }
+  struct channel_descriptor descriptor = encoder_in->channel_context.descriptor;
+  lsampl_t data;
+  comedi_data_read(encoder_in->channel_context.device->comedi.handle,
+                   descriptor.subdevice,
+                   descriptor.subchannel,
+                   0, 0, &data);
+  *value = data - descriptor.maxdata / 2;
+  return 1;
+err:
+  return 0;
 }
 
 static struct moberg_device_context *new_context(struct moberg *moberg,
@@ -186,10 +261,6 @@ static int channel_open(struct moberg_channel *channel)
 {
   channel_up(channel);
   if (! device_open(channel->context->device)) { goto err; }
-  fprintf(stderr, "Open %s[%d][%d]\n",
-          channel->context->device->name, 
-          channel->context->descriptor.subdevice, 
-          channel->context->descriptor.subchannel);
   lsampl_t maxdata;
   comedi_range *range;
           
@@ -219,6 +290,30 @@ static int channel_open(struct moberg_channel *channel)
   channel->context->descriptor.min = range->min;
   channel->context->descriptor.max = range->max;
   channel->context->descriptor.delta = (range->max - range->min) / maxdata;
+  if (channel->kind == chan_DIGITALIN) {
+    comedi_dio_config(channel->context->device->comedi.handle,
+                      channel->context->descriptor.subdevice,
+                      channel->context->descriptor.subchannel,
+                      0);
+  } else if (channel->kind == chan_DIGITALOUT) {
+    comedi_dio_config(channel->context->device->comedi.handle,
+                      channel->context->descriptor.subdevice,
+                      channel->context->descriptor.subchannel,
+                      1);
+  }
+  if (channel->context->descriptor.route != -1) {
+    comedi_insn insn;
+    lsampl_t data[2];
+    memset(&insn, 0, sizeof(comedi_insn));
+    insn.insn = INSN_CONFIG;
+    insn.subdev = channel->context->descriptor.subdevice;
+    insn.chanspec = channel->context->descriptor.subchannel;
+    insn.data = data;
+    insn.n = sizeof(data) / sizeof(data[0]);
+    data[0] = INSN_CONFIG_SET_ROUTING;
+    data[1] = channel->context->descriptor.route;
+    comedi_do_insn(channel->context->device->comedi.handle, &insn);
+  }
   return 1;
 err:
   return 0;
@@ -360,7 +455,7 @@ static int parse_map(struct moberg_device_context *device,
                      enum moberg_channel_kind kind,
                      struct moberg_channel_map *map)
 {
-  token_t min, max, route={ .u.integer.value=0 };
+  token_t min, max, route={ .u.integer.value=-1 };
 
   if (! acceptsym(c, tok_LBRACE, NULL)) { goto err; }
   for (;;) {
@@ -419,7 +514,7 @@ static int parse_map(struct moberg_device_context *device,
                          kind,
                          (union moberg_channel_action) {
                            .analog_out.context=channel,
-                           .analog_out.write=NULL });
+                           .analog_out.write=analog_out_write });
             map->map(map->device, &channel->channel);
           }
         } break;
@@ -436,7 +531,7 @@ static int parse_map(struct moberg_device_context *device,
                          kind,
                          (union moberg_channel_action) {
                            .digital_in.context=channel,
-                           .digital_in.read=NULL });
+                           .digital_in.read=digital_in_read });
             map->map(map->device, &channel->channel);
           }
         } break;
@@ -453,7 +548,7 @@ static int parse_map(struct moberg_device_context *device,
                          kind,
                          (union moberg_channel_action) {
                            .digital_out.context=channel,
-                           .digital_out.write=NULL });
+                           .digital_out.write=digital_out_write });
             map->map(map->device, &channel->channel);
           }
         } break;
@@ -470,7 +565,7 @@ static int parse_map(struct moberg_device_context *device,
                          kind,
                          (union moberg_channel_action) {
                            .encoder_in.context=channel,
-                           .encoder_in.read=NULL });
+                           .encoder_in.read=encoder_in_read });
             map->map(map->device, &channel->channel);
           }
         } break;

@@ -86,8 +86,7 @@ void moberg_device_free(struct moberg_device *device)
     free(channel);
     channel = next;
   }
-  int use = device->driver.down(device->device_context);
-  fprintf(stderr, "USE: %d\n", use);
+  device->driver.down(device->device_context);
   free(device);
 }
 
@@ -95,7 +94,6 @@ int moberg_device_in_use(struct moberg_device *device)
 {
   device->driver.up(device->device_context);
   int use = device->driver.down(device->device_context);
-  fprintf(stderr, "IN_USE: %d\n", use);
   return use > 1;
 }
 
@@ -123,81 +121,6 @@ err:
   return 0;
 }
 
-int moberg_device_add_analog_in(struct moberg_device* device,
-                                struct moberg_channel_analog_in *channel)
-{
-  int result = 0;
-  
-  if (device->range->kind == chan_ANALOGIN &&
-      device->range->min <= device->range->max) {
-    printf("Mapping %d\n", device->range->min);
-    result = add_channel(device, device->range->kind, device->range->min,
-                         (union channel) { .analog_in=channel });
-    device->range->min++;
-  }
-  return result;
-}
-                            
-int moberg_device_add_analog_out(struct moberg_device* device,
-                                 struct moberg_channel_analog_out *channel)
-{
-  int result = 0;
-  
-  if (device->range->kind == chan_ANALOGOUT &&
-      device->range->min <= device->range->max) {
-    printf("Mapping %d\n", device->range->min);
-    result = add_channel(device, device->range->kind, device->range->min,
-                         (union channel) { .analog_out=channel });
-    device->range->min++;
-  }
-  return result;
-}
-                            
-int moberg_device_add_digital_in(struct moberg_device* device,
-                                struct moberg_channel_digital_in *channel)
-{
-  int result = 0;
-  
-  if (device->range->kind == chan_DIGITALIN &&
-      device->range->min <= device->range->max) {
-    printf("Mapping %d\n", device->range->min);
-    result = add_channel(device, device->range->kind, device->range->min,
-                         (union channel) { .digital_in=channel });
-    device->range->min++;
-  }
-  return result;
-}
-                            
-int moberg_device_add_digital_out(struct moberg_device* device,
-                                 struct moberg_channel_digital_out *channel)
-{
-  int result = 0;
-  
-  if (device->range->kind == chan_DIGITALOUT &&
-      device->range->min <= device->range->max) {
-    printf("Mapping %d\n", device->range->min);
-    result = add_channel(device, device->range->kind, device->range->min,
-                         (union channel) { .digital_out=channel });
-    device->range->min++;
-  }
-  return result;
-}
-                            
-int moberg_device_add_encoder_in(struct moberg_device* device,
-                                 struct moberg_channel_encoder_in *channel)
-{
-  int result = 0;
-  
-  if (device->range->kind == chan_ENCODERIN &&
-      device->range->min <= device->range->max) {
-    printf("Mapping %d\n", device->range->min);
-    result = add_channel(device, device->range->kind, device->range->min,
-                         (union channel) { .encoder_in=channel });
-    device->range->min++;
-  }
-  return result;
-}
-
 static int map(struct moberg_device* device,
                struct moberg_channel *channel)
 {
@@ -205,7 +128,6 @@ static int map(struct moberg_device* device,
  
   if (device->range->kind == channel->kind &&
       device->range->min <= device->range->max) {
-    printf("XX Mapping %d\n", device->range->min);
     result = add_channel(device, device->range->kind, device->range->min,
                          (union channel) { .channel=channel });
     device->range->min++;
@@ -236,7 +158,6 @@ int moberg_device_parse_map(struct moberg_device* device,
   result = device->driver.parse_map(device->device_context, parser,
                                     kind, &map_channel);
   device->range = NULL;
-  printf("RRR %d %d\n", r.min, r.max);
   return result;
 }
 
@@ -244,7 +165,6 @@ int moberg_device_install_channels(struct moberg_device *device,
                                    struct moberg_channel_install *install)
 {
   
-  printf("INSTALL\n");
   struct channel_list *channel = device->channel_head;
   while (channel) {
     struct channel_list *next;

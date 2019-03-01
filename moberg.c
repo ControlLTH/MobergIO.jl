@@ -100,9 +100,7 @@ static void parse_config_at(
           if (read(fd, buf, statbuf.st_size) == statbuf.st_size) {
             buf[statbuf.st_size] = 0;
           }
-          printf("Parsing... %s %d %d\n", pathname, dirfd, fd);
           struct moberg_config *config = moberg_parse(moberg, buf);
-          printf("-> %p\n", config);
           if (config) {
             if (! moberg->config) {
               moberg->config = config;
@@ -151,7 +149,6 @@ static int install_channel(struct moberg *moberg,
                            struct moberg_device* device,
                            struct moberg_channel *channel)
 {
-  fprintf(stderr, "CHAN %p %d %d\n", channel, channel->kind, index);
   if (channel) {
     struct moberg_channel *old = NULL;
     switch (channel->kind) {
@@ -294,9 +291,7 @@ int moberg_analog_in_open(struct moberg *moberg,
   struct moberg_channel *channel = NULL;
   channel_list_get(&moberg->analog_in, index, &channel);
   if (channel) {
-    printf("Call open\n");
     channel->open(channel);
-    channel->up(channel);
     *analog_in = channel->action.analog_in;
     return 1;
   }
@@ -310,9 +305,7 @@ int moberg_analog_in_close(struct moberg *moberg,
   struct moberg_channel *channel = NULL;
   channel_list_get(&moberg->analog_in, index, &channel);
   if (channel && channel->action.analog_in.context == analog_in.context) {
-    printf("Call close\n");
     channel->close(channel);
-    channel->down(channel);
   }
   return 1;
 }

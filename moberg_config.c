@@ -83,7 +83,6 @@ int moberg_config_install_channels(struct moberg_config *config,
     if (moberg_device_in_use(device->device)) {
       previous = &device->next;
     } else {
-      fprintf(stderr, "FREE\n");
       moberg_device_free(device->device);
       free(device);
       *previous = next;
