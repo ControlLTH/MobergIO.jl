@@ -212,8 +212,12 @@ static int install_config(struct moberg *moberg)
     .context=moberg,
     .channel=install_channel
   };
-  return moberg_config_install_channels(moberg->config, &install);
-  /* TODO cleanup unused devices...*/
+  if (! moberg->config) {
+    fprintf(stderr, "No moberg configuration found\n");
+    return 0;
+  } else {
+    return moberg_config_install_channels(moberg->config, &install);
+  }
 }
 
 struct moberg *moberg_new(
@@ -310,7 +314,109 @@ int moberg_analog_in_close(struct moberg *moberg,
   return 1;
 }
 
+int moberg_analog_out_open(struct moberg *moberg,
+                           int index,
+                           struct moberg_analog_out *analog_out)
+{
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->analog_out, index, &channel);
+  if (channel) {
+    channel->open(channel);
+    *analog_out = channel->action.analog_out;
+    return 1;
+  }
+  return 0;
+}
 
+int moberg_analog_out_close(struct moberg *moberg,
+                            int index,
+                            struct moberg_analog_out analog_out)
+{
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->analog_out, index, &channel);
+  if (channel && channel->action.analog_out.context == analog_out.context) {
+    channel->close(channel);
+  }
+  return 1;
+}
+
+int moberg_digital_in_open(struct moberg *moberg,
+                           int index,
+                           struct moberg_digital_in *digital_in)
+{
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->digital_in, index, &channel);
+  if (channel) {
+    channel->open(channel);
+    *digital_in = channel->action.digital_in;
+    return 1;
+  }
+  return 0;
+}
+
+int moberg_digital_in_close(struct moberg *moberg,
+                            int index,
+                            struct moberg_digital_in digital_in)
+{
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->digital_in, index, &channel);
+  if (channel && channel->action.digital_in.context == digital_in.context) {
+    channel->close(channel);
+  }
+  return 1;
+}
+
+int moberg_digital_out_open(struct moberg *moberg,
+                            int index,
+                            struct moberg_digital_out *digital_out)
+{
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->digital_out, index, &channel);
+  if (channel) {
+    channel->open(channel);
+    *digital_out = channel->action.digital_out;
+    return 1;
+  }
+  return 0;
+}
+
+int moberg_digital_out_close(struct moberg *moberg,
+                             int index,
+                             struct moberg_digital_out digital_out)
+{
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->digital_out, index, &channel);
+  if (channel && channel->action.digital_out.context == digital_out.context) {
+    channel->close(channel);
+  }
+  return 1;
+}
+
+int moberg_encoder_in_open(struct moberg *moberg,
+                           int index,
+                           struct moberg_encoder_in *encoder_in)
+{
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->encoder_in, index, &channel);
+  if (channel) {
+    channel->open(channel);
+    *encoder_in = channel->action.encoder_in;
+    return 1;
+  }
+  return 0;
+}
+
+int moberg_encoder_in_close(struct moberg *moberg,
+                            int index,
+                            struct moberg_encoder_in encoder_in)
+{
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->encoder_in, index, &channel);
+  if (channel && channel->action.encoder_in.context == encoder_in.context) {
+    channel->close(channel);
+  }
+  return 1;
+}
 
 /* System init functionality (systemd/init/...) */
 

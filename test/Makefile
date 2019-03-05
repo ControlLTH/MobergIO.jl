@@ -1,6 +1,9 @@
-TEST = test_start_stop test_io
-
+TEST = test_start_stop test_io test_moberg4simulink
+CCFLAGS += -Wall -Werror -I$(shell pwd) -g
+LDFLAGS += -L$(shell pwd)/build/ -lmoberg
 ENV_TEST = LD_LIBRARY_PATH=../build HOME=.
+LDFLAGS_test_moberg4simulink = -lmoberg4simulink
+CCFLAGS_test_moberg4simulink = -I../adaptors/matlab -Wall -Werror -I$(shell pwd) -g
 
 all: 
 
@@ -14,7 +17,7 @@ run_%:	build/%
 .PRECIOUS: build/%
 
 build/%: %.c | build
-	$(CC) $(CCFLAGS) $(LDFLAGS) -o $@ $<
+	$(CC) $(CCFLAGS) $(CCFLAGS_$*) $(LDFLAGS) $(LDFLAGS_$*) -o $@ $<
 
 build:
 	mkdir build

@@ -2,11 +2,12 @@ LIBRARIES=libmoberg.so
 CCFLAGS+=-Wall -Werror -I$(shell pwd) -g
 LDFLAGS+=-L$(shell pwd)/build/ -lmoberg
 PLUGINS:=$(wildcard plugins/*)
+ADAPTORS:=$(wildcard adaptors/*)
 export CCFLAGS LDFLAGS
 LDFLAGS_parse_config=-ldl
 #-export-dynamic
 
-all: $(LIBRARIES:%=build/%) $(PLUGINS)
+all: $(LIBRARIES:%=build/%) $(PLUGINS) $(ADAPTORS)
 	echo $(PLUGINS)
 	echo $(CCFLAGS)
 
@@ -27,8 +28,8 @@ build/lib/%.o:	%.c Makefile | build/lib
 	$(CC) $(CCFLAGS) -c -fPIC -o $@ $<
 
 
-.PHONY: $(PLUGINS)
-$(PLUGINS): 
+.PHONY: $(PLUGINS) $(ADAPTORS)
+$(ADAPTORS) $(PLUGINS): 
 	$(MAKE) -C $@
 
 
@@ -37,7 +38,7 @@ test: all
 	$(MAKE) -C test test
 
 clean:
-	find build -type f -delete
+	rm -f build/*.so build/*.mex*
 	rm -f *~
 	make -C test clean
 

@@ -47,6 +47,38 @@ int moberg_analog_in_close(struct moberg *moberg,
                            int index,
                            struct moberg_analog_in analog_in);
 
+int moberg_analog_out_open(struct moberg *moberg,
+                             int index,
+                           struct moberg_analog_out *analog_out);
+
+int moberg_analog_out_close(struct moberg *moberg,
+                            int index,
+                            struct moberg_analog_out analog_out);
+
+int moberg_digital_in_open(struct moberg *moberg,
+                           int index,
+                           struct moberg_digital_in *digital_in);
+
+int moberg_digital_in_close(struct moberg *moberg,
+                            int index,
+                            struct moberg_digital_in digital_in);
+
+int moberg_digital_out_open(struct moberg *moberg,
+                            int index,
+                            struct moberg_digital_out *digital_out);
+
+int moberg_digital_out_close(struct moberg *moberg,
+                             int index,
+                             struct moberg_digital_out digital_out);
+
+int moberg_encoder_in_open(struct moberg *moberg,
+                           int index,
+                           struct moberg_encoder_in *encoder_in);
+
+int moberg_encoder_in_close(struct moberg *moberg,
+                            int index,
+                            struct moberg_encoder_in encoder_in);
+
 /* System init functionality (systemd/init/...) */
 
 int moberg_start(
