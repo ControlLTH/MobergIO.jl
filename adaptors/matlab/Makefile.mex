@@ -1,0 +1,26 @@
+MATLAB_VERSION=
+MEX=MATLAB_VERSION=$(MATLAB_VERSION) mex
+SUFFIX=$(shell $(MEX) -v -n analogin.c 2>&1 | \
+	       sed -e 's/^.*LDEXTENSION.*[.]\(mex.*\)/\1/p;d')
+TARGETS=realtimer \
+        analogin analogout \
+	digitalin digitalout \
+	encoderin 
+
+EXTRAFLAGS_realtimer=
+EXTRAFLAGS_analogin=-lmoberg4simulink
+EXTRAFLAGS_analogout=-lmoberg4simulink
+EXTRAFLAGS_digitalin=-lmoberg4simulink
+EXTRAFLAGS_digitalout=-lmoberg4simulink
+EXTRAFLAGS_encoderin=-lmoberg4simulink
+
+all:	$(TARGETS:%=%.$(SUFFIX))
+
+%.$(SUFFIX): %.c Makefile
+	$(MEX) CFLAGS='$$CFLAGS -Wall -Werror -I.' $< $(EXTRAFLAGS_$*)
+
+clean:
+	rm -f *~
+
+realclean: clean
+	rm -f $(TARGETS:%=%.mex*)

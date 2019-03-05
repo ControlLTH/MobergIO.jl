@@ -24,14 +24,16 @@ struct moberg_config *moberg_config_new()
 
 void moberg_config_free(struct moberg_config *config)
 {
-  struct device_entry *entry = config->device_head;
-  while (entry) {
-    struct device_entry *tmp = entry;
-    entry = entry->next;
-    moberg_device_free(tmp->device);
-    free(tmp);
+  if (config) {
+    struct device_entry *entry = config->device_head;
+    while (entry) {
+      struct device_entry *tmp = entry;
+      entry = entry->next;
+      moberg_device_free(tmp->device);
+      free(tmp);
+    }
+    free(config);
   }
-  free(config);
 }
 
 int moberg_config_join(struct moberg_config *dest,

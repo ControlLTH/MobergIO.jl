@@ -58,26 +58,28 @@ mkdir -p ${RPM_BUILD_ROOT}%{_includedir}
 cp moberg.h ${RPM_BUILD_ROOT}%{_includedir}
 
 mkdir -p ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
-cp adaptors/matlab/*.h  ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
-cp adaptors/matlab/*in.c  ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
-cp adaptors/matlab/*out.c  ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
-cp adaptors/matlab/Makefile  ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
+mkdir -p ${RPM_BUILD_ROOT}%{_includedir}
+cp adaptors/matlab/moberg4simulink.h ${RPM_BUILD_ROOT}%{_includedir}
+cp adaptors/matlab/realtimer.c ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
+cp adaptors/matlab/*in.c ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
+cp adaptors/matlab/*out.c ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
+cp adaptors/matlab/Makefile.mex ${RPM_BUILD_ROOT}/opt/matlab/src/moberg/Makefile
 
 %files
 %defattr(-,root,root,-)
-%attr(04755,root,root) %{_libdir}/libmoberg.so
-%attr(04755,root,root) %{_libdir}/libmoberg_serial2002.so
+%{_libdir}/libmoberg.so
+%{_libdir}/libmoberg_serial2002.so
 
 %files comedi
 %defattr(-,root,root,-)
-%attr(04755,root,root) %{_libdir}/libmoberg_comedi.so
+%{_libdir}/libmoberg_comedi.so
 
 %files devel
 %defattr(-,root,root,-)
-%attr(04755,root,root) %{_includedir}/moberg.h
+%{_includedir}/moberg.h
 
 %files matlab
 %defattr(-,root,root,-)
-%attr(04755,root,root) %{_libdir}/libmoberg4simulink.so
-%attr(04755,root,root) /opt/matlab/src/moberg/*
-
+%{_libdir}/libmoberg4simulink.so
+/opt/matlab/src/moberg/*
+%{_includedir}/moberg4simulink.h
