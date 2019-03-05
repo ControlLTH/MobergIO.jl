@@ -8,6 +8,7 @@ Source0:        https://gitlab.control.lth.se/anders_blomdell/moberg/-/archive/m
 BuildRequires:  gcc
 BuildRequires:  comedilib-devel
 BuildRequires:  valgrind
+BuildRequires:  libxdg-basedir-devel
 
 %description
 Shared library for abstracting physical process I/O (analog, digital
