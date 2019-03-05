@@ -1,4 +1,5 @@
 LIBRARIES=libmoberg.so
+MOBERG_VERSION=$(shell git describe --tags | sed -e 's/^v//;s/-/_/g' )
 CCFLAGS+=-Wall -Werror -I$(shell pwd) -g
 LDFLAGS+=-L$(shell pwd)/build/ -lmoberg
 PLUGINS:=$(wildcard plugins/*)
@@ -27,10 +28,25 @@ build/%.o:	%.c Makefile
 build/lib/%.o:	%.c Makefile | build/lib
 	$(CC) $(CCFLAGS) -c -fPIC -o $@ $<
 
-
 .PHONY: $(PLUGINS) $(ADAPTORS)
 $(ADAPTORS) $(PLUGINS): 
 	$(MAKE) -C $@
+
+.PHONY: TAR
+TAR:
+	git archive \
+		--prefix moberg-$(MOBERG_VERSION)/ \
+		--output moberg-$(MOBERG_VERSION).tar.gz -- HEAD
+
+.PHONY: moberg-$(MOBERG_VERSION).spec
+moberg-$(MOBERG_VERSION).spec: moberg.spec.template Makefile
+	sed -e 's/__MOBERG_VERSION__/$(MOBERG_VERSION)/' $< > $@
+
+.PHONY: SRPM
+SRPM:	moberg-$(MOBERG_VERSION).spec TAR
+	rpmbuild --define "_sourcedir $$(pwd)" \
+		 -bs $<
+
 
 
 .PHONY: test
@@ -38,8 +54,11 @@ test: all
 	$(MAKE) -C test test
 
 clean:
-	rm -f build/*.so build/*.mex*
+	rm -f build/*.so
+	rm -f build/*.mex*
 	rm -f *~
+	rm -f moberg-*.spec
+	rm -f moberg-*.tar.gz
 	make -C test clean
 
 build/libmoberg.so: build/lib/moberg.o

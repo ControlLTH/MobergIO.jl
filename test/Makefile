@@ -5,7 +5,7 @@ ENV_TEST = LD_LIBRARY_PATH=../build HOME=.
 LDFLAGS_test_moberg4simulink = -lmoberg4simulink
 CCFLAGS_test_moberg4simulink = -I../adaptors/matlab -Wall -Werror -I$(shell pwd) -g
 
-all: 
+all:
 
 .PHONY: test
 test: $(TEST:%=run_%)

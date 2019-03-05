@@ -1,0 +1,82 @@
+Name:           moberg
+Version:        __MOBERG_VERSION__
+Release:        1
+Summary:        Library for abstracting physical I/O
+License:        GPLv3
+Source0:        https://gitlab.control.lth.se/anders_blomdell/moberg/-/archive/master/moberg-__MOBERG_VERSION__.tar.gz
+
+BuildRequires:  gcc
+BuildRequires:  comedilib-devel
+BuildRequires:  valgrind
+
+%description
+Shared library for abstracting physical process I/O (analog, digital
+and encoders)
+
+%package comedi
+Summary: Comedi support for %{name}
+Requires: %{name} = %{version}-%{release}
+Requires:       comedilib
+
+%description comedi
+Comedi support for for %{name}
+
+%package devel
+Summary: Development files for %{name}
+Requires: %{name} = %{version}-%{release}
+
+%description devel
+Development files for %{name}
+
+%package matlab
+Summary: Matlab development files for %{name}
+Requires: %{name} = %{version}-%{release}
+Requires: %{name}-devel = %{version}-%{release}
+
+%description matlab
+Matlab development files for %{name}
+
+
+%prep
+%setup -q -n %{name}-__MOBERG_VERSION__
+
+
+%build
+make MOBERG_VERSION=__MOBERG_VERSION__
+
+%check
+make test
+
+%install
+rm -rf ${RPM_BUILD_ROOT}
+
+mkdir -p ${RPM_BUILD_ROOT}%{_libdir}
+cp build/libmoberg*.so ${RPM_BUILD_ROOT}%{_libdir}
+
+mkdir -p ${RPM_BUILD_ROOT}%{_includedir}
+cp moberg.h ${RPM_BUILD_ROOT}%{_includedir}
+
+mkdir -p ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
+cp adaptors/matlab/*.h  ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
+cp adaptors/matlab/*in.c  ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
+cp adaptors/matlab/*out.c  ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
+cp adaptors/matlab/Makefile  ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
+
+%files
+%defattr(-,root,root,-)
+%attr(04755,root,root) %{_libdir}/libmoberg.so
+%attr(04755,root,root) %{_libdir}/libmoberg_serial2002.so
+
+%files comedi
+%defattr(-,root,root,-)
+%attr(04755,root,root) %{_libdir}/libmoberg_comedi.so
+
+%files devel
+%defattr(-,root,root,-)
+%attr(04755,root,root) %{_includedir}/moberg.h
+
+%files matlab
+%defattr(-,root,root,-)
+%attr(04755,root,root) %{_libdir}/libmoberg4simulink.so
+%attr(04755,root,root) /opt/matlab/src/moberg/*
+

@@ -7,8 +7,10 @@ MEX_SUFFIX=$(shell $(MEX) -v -n analogin.c \
 
 CCFLAGS+=-Wall -Werror -I. -I../.. -g
 
-all:	$(LIBRARIES:%=../../build/%) $(SFUNC:%=../../build/%.$(MEX_SUFFIX))
-	echo $(SUFFIX)
+all:	$(LIBRARIES:%=../../build/%)
+
+.PHONY: SFUNC
+SFUNC: $(SFUNC:%=../../build/%.$(MEX_SUFFIX))
 
 ../../build/libmoberg4simulink.so: moberg4simulink.c Makefile
 	$(CC) -o $@ $(CCFLAGS) -L../../build -shared -fPIC -lmoberg $<

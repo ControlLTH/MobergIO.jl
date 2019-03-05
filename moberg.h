@@ -4,11 +4,10 @@
 #include <stdio.h>
 
 struct moberg;
-struct moberg_config;
 
 /* Creation & free */
 
-struct moberg *moberg_new(struct moberg_config *config);
+struct moberg *moberg_new();
 
 void moberg_free(struct moberg *moberg);
 

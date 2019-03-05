@@ -220,8 +220,7 @@ static int install_config(struct moberg *moberg)
   }
 }
 
-struct moberg *moberg_new(
-  struct moberg_config *config)
+struct moberg *moberg_new()
 {
   struct moberg *result = malloc(sizeof(*result));
   if (! result) {
@@ -239,32 +238,28 @@ struct moberg *moberg_new(
   result->encoder_in.capacity = 0;
   result->encoder_in.value = NULL;
   result->deferred_action = NULL;
-  if (config) {
-    result->config = config;
-  } else {
-    result->config = NULL;
+  result->config = NULL;
     
-    /* Parse default configuration(s) */
-    const char * const *config_paths = xdgSearchableConfigDirectories(NULL);
-    const char * const *path;
-    for (path = config_paths ; *path ; path++) {
-      int dirfd1 = open(*path, O_DIRECTORY);
-      if (dirfd >= 0) {
-        parse_config_at(result, dirfd1, "moberg.conf");
-        int dirfd2 = openat(dirfd1, "moberg.d", O_DIRECTORY);
-        if (dirfd2 >= 0) { 
-          parse_config_dir_at(result, dirfd2);
-          close(dirfd2);
-        }
-        close(dirfd1);
+  /* Parse default configuration(s) */
+  const char * const *config_paths = xdgSearchableConfigDirectories(NULL);
+  const char * const *path;
+  for (path = config_paths ; *path ; path++) {
+    int dirfd1 = open(*path, O_DIRECTORY);
+    if (dirfd >= 0) {
+      parse_config_at(result, dirfd1, "moberg.conf");
+      int dirfd2 = openat(dirfd1, "moberg.d", O_DIRECTORY);
+      if (dirfd2 >= 0) { 
+        parse_config_dir_at(result, dirfd2);
+        close(dirfd2);
       }
-      free((char*)*path);
+      close(dirfd1);
     }
-    free((const char **)config_paths);
-    
-    /* Read environment default */
-    /* Parse environment overrides */
+    free((char*)*path);
   }
+  free((const char **)config_paths);
+  
+  /* TODO: Read & parse environment overrides */
+
   install_config(result);
   run_deferred_actions(result);
   
