@@ -46,12 +46,12 @@ static int channel_list_set(struct channel_list *list,
   if (list->capacity <= index) {
     int capacity;
     for (capacity = 2 ; capacity <= index ; capacity *= 2);
-    void *new = realloc(list->value, capacity * sizeof(**list->value));
+    void *new = realloc(list->value, capacity * sizeof(*list->value));
     if (!new) {
       goto err;
     }
     void *p = new + list->capacity * sizeof(*list->value);
-    memset(p, 0, (capacity - list->capacity) * sizeof(**list->value));
+    memset(p, 0, (capacity - list->capacity) * sizeof(*list->value));
     list->value = new;
     list->capacity = capacity;
   }
