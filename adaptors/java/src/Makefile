@@ -8,8 +8,9 @@ JAVAH_PATH=$(shell javah -Xbootclasspath/p:build -version >/dev/null 2>&1 && \
 JNI_INCLUDE=/usr/lib/jvm/java/include/
 CC=gcc
 CC_JNI_FLAGS=-Wall -Werror -shared -fPIC \
-	     -I$(JNI_INCLUDE) -I$(JNI_INCLUDE)/linux -Ibuild \
-	     -lmoberg
+	     -I$(JNI_INCLUDE) -I$(JNI_INCLUDE)/linux \
+	     -I../../ -Ibuild \
+	     -L../../build -lmoberg
 JAVADIR=/tmp
 INSTALL_DIR=$(JAVADIR)/$(JARNAME)
 JAR_DIR=$(INSTALL_DIR)/jre/lib/ext/

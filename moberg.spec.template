@@ -30,6 +30,13 @@ Requires: %{name} = %{version}-%{release}
 %description devel
 Development files for %{name}
 
+%package java
+Summary: Java support files for %{name}
+Requires: %{name} = %{version}-%{release}
+
+%description java
+Java support files for %{name}
+
 %package matlab
 Summary: Matlab support files for %{name}
 Requires: %{name} = %{version}-%{release}
@@ -37,13 +44,6 @@ Requires: %{name}-devel = %{version}-%{release}
 
 %description matlab
 Matlab support files for %{name}
-
-%package java
-Summary: Java support files for %{name}
-Requires: %{name} = %{version}-%{release}
-
-%description java
-Java support files for %{name}
 
 
 %prep
@@ -65,6 +65,11 @@ cp build/libmoberg*.so ${RPM_BUILD_ROOT}%{_libdir}
 mkdir -p ${RPM_BUILD_ROOT}%{_includedir}
 cp moberg.h ${RPM_BUILD_ROOT}%{_includedir}
 
+mkdir -p ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg
+cp adaptors/java/README ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg
+cp -r adaptors/java/src ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg/src
+cp -r adaptors/java/build ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg/jre
+
 mkdir -p ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
 mkdir -p ${RPM_BUILD_ROOT}%{_includedir}
 cp adaptors/matlab/moberg4simulink.h ${RPM_BUILD_ROOT}%{_includedir}
@@ -85,6 +90,10 @@ cp adaptors/matlab/Makefile.mex ${RPM_BUILD_ROOT}/opt/matlab/src/moberg/Makefile
 %files devel
 %defattr(-,root,root,-)
 %{_includedir}/moberg.h
+
+%files java
+%defattr(-,root,root,-)
+/opt/java/se.lth.control.realtime.Moberg
 
 %files matlab
 %defattr(-,root,root,-)
