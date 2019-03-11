@@ -135,7 +135,11 @@ static void mdlOutputs(SimStruct *S, int_T tid)
       
     for (i = 0 ; i < ssGetNumPWork(S) ; i++) {
       struct moberg_analog_in *ain = (struct moberg_analog_in*)pwork[i];
-      ain->read(ain->context, &y[i]);
+      if (! ain->read(ain->context, &y[i])) {
+        static char error[256];
+        sprintf(error, "Failed to read analogin #%d", (int)channel[i]);
+        ssSetErrorStatus(S, error);
+      }
     }
   }
 }

@@ -24,3 +24,4 @@ build:
 
 clean:
 	rm -f vgcore.* *~
+	rm -rf build

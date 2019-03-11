@@ -1,3 +1,24 @@
+/*
+    moberg_parser.c -- moberg parser interface
+
+    Copyright (C) 2019 Anders Blomdell <anders.blomdell@gmail.com>
+
+    This file is part of Moberg.
+
+    Moberg is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -5,14 +26,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <moberg.h>
+#include <moberg_inline.h>
 #include <moberg_config.h>
 #include <moberg_parser.h>
 #include <moberg_module.h>
 #include <moberg_device.h>
-
-typedef enum moberg_parser_token_kind kind_t;
-typedef struct moberg_parser_token token_t;
-typedef struct moberg_parser_ident ident_t;
 
 #define MAX_EXPECTED 10
 
@@ -28,19 +48,6 @@ typedef struct moberg_parser_context {
 } context_t;
 
 
-static inline int acceptsym(context_t *c,
-			   kind_t kind,
-			   token_t *token)
-{
-  return moberg_parser_acceptsym(c, kind, token);
-}
-  
-static inline int acceptkeyword(context_t *c,
-				const char *keyword)
-{
-  return moberg_parser_acceptkeyword(c, keyword);
-}
- 
 static const void nextsym_ident(context_t *c)
 {
   c->token.kind = tok_IDENT;
@@ -247,7 +254,7 @@ int moberg_parser_acceptkeyword(context_t *c,
   return 0;
 }
 
-void moberg_parser_failed(
+struct moberg_status moberg_parser_failed(
   struct moberg_parser_context *c,
   FILE *f)
 {
@@ -285,6 +292,7 @@ void moberg_parser_failed(
       break;
   }
   fprintf(f, "\n%s\n", c->p);
+  return MOBERG_ERRNO(EINVAL);
 }
 
 
@@ -314,8 +322,8 @@ err:
   return 0;
 }
 
-static int parse_map(context_t *c,
-                     struct moberg_device *device)
+static struct moberg_status parse_map(context_t *c,
+                                      struct moberg_device *device)
 {
   enum moberg_channel_kind kind;
   int min, max;
@@ -328,42 +336,45 @@ static int parse_map(context_t *c,
   else { goto syntax_err; }
   if (! parse_map_range(c, &min, &max)) { goto syntax_err; }
   if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
-  if (! moberg_device_parse_map(device, c, kind, min, max)) {
-    goto err;
-  }
+  struct moberg_status result = moberg_device_parse_map(device, c,
+                                                        kind, min, max);
+  if (! OK(result)) { return result; }
   if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
-  return 1;
+  return MOBERG_OK;
 syntax_err:
-  moberg_parser_failed(c, stderr);
-err:    
-  return 0;
+  return moberg_parser_failed(c, stderr);
 }
 
-static int parse_device(context_t *c,
-                        struct moberg_device *device)
+static struct moberg_status parse_device(context_t *c,
+                                         struct moberg_device *device)
 {
   if (! acceptsym(c, tok_LBRACE, NULL)) { goto syntax_err; }
   for (;;) {
     if (acceptkeyword(c, "config")) {
-     moberg_device_parse_config(device, c);
+      struct moberg_status result = moberg_device_parse_config(device, c);
+      if (! OK(result)) {
+        return result;
+      }
     } else if (acceptkeyword(c, "map")) {
-      if (! parse_map(c, device)) { goto err; }
+      struct moberg_status result = parse_map(c, device);
+      if (! OK(result)) {
+        return result;
+      }
     } else if (acceptsym(c, tok_RBRACE, NULL)) {
       break;
     } else {
       goto syntax_err;
     }
   }
-  return 1;
+  return MOBERG_OK;
 syntax_err:
-  moberg_parser_failed(c, stderr);
-err:
-  return 0;
+  return moberg_parser_failed(c, stderr);
 }
 
-static int parse(struct moberg *moberg,
-                 context_t *c)
+static struct moberg_status parse(struct moberg *moberg,
+                                  context_t *c)
 {
+  struct moberg_status result = MOBERG_OK;
   for (;;) {
     if (acceptsym(c, tok_EOF, NULL)) {
       break;
@@ -380,30 +391,34 @@ static int parse(struct moberg *moberg,
       if (! name) {
         fprintf(stderr, "Failed to allocate driver name '%.*s'\n",
                 t.u.idstr.length, t.u.idstr.value);
-        goto err;
+        result = MOBERG_ERRNO(ENOMEM);
+        goto err_result;
       }
       device = moberg_device_new(moberg, name);
       free(name);
-      if (! device) { goto err; }
-
-      if (! parse_device(c, device)) {
+      if (! device) {
+        result = MOBERG_ERRNO(ENOMEM);
+        goto err_result;
+      }
+      result = parse_device(c, device);
+      if (! OK(result)) {
         goto device_free;
       }
-      if (! moberg_config_add_device(c->config, device)) {
+      result = moberg_config_add_device(c->config, device);
+      if (! OK(result)) {
         goto device_free;
       }
       continue;
     device_free:
       moberg_device_free(device);      
-      goto err;
+      goto err_result;
     }
   }
-  return 1;
+  return MOBERG_OK;
+err_result:
+  return result;
 syntax_err:  
-  moberg_parser_failed(c, stderr);
-  goto err;
-err:
-  return 0;
+  return moberg_parser_failed(c, stderr);
 }
 
 struct moberg_config *moberg_parse(struct moberg *moberg,
@@ -417,7 +432,7 @@ struct moberg_config *moberg_parse(struct moberg *moberg,
     context.buf = buf;
     context.p = context.buf;
     nextsym(&context);
-    if (! parse(moberg, &context)) {
+    if (! OK(parse(moberg, &context))) {
       moberg_config_free(context.config);
       context.config = NULL;
     }

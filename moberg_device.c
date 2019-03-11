@@ -1,10 +1,33 @@
+/*
+    moberg_device.c -- moberg device driver interface
+
+    Copyright (C) 2019 Anders Blomdell <anders.blomdell@gmail.com>
+
+    This file is part of Moberg.
+
+    Moberg is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <errno.h>
+#include <moberg_channel.h>
 #include <moberg_config.h>
 #include <moberg_device.h>
-#include <moberg_channel.h>
+#include <moberg_inline.h>
 
 struct moberg_device {
   struct moberg_device_driver driver;
@@ -97,16 +120,18 @@ int moberg_device_in_use(struct moberg_device *device)
   return use > 1;
 }
 
-int moberg_device_parse_config(struct moberg_device *device,
-                               struct moberg_parser_context *parser)
+struct moberg_status moberg_device_parse_config(
+  struct moberg_device *device,
+  struct moberg_parser_context *parser)
 {
   return device->driver.parse_config(device->device_context, parser);
 }
 
-static int add_channel(struct moberg_device* device,
-                       enum moberg_channel_kind kind,
-                       int index,
-                       union channel channel)
+static struct moberg_status add_channel(
+  struct moberg_device* device,
+  enum moberg_channel_kind kind,
+  int index,
+  union channel channel)
 {
   struct channel_list *element = malloc(sizeof(*element));
   if (! element) { goto err; }
@@ -116,33 +141,41 @@ static int add_channel(struct moberg_device* device,
   element->u = channel;
   *device->channel_tail = element;
   device->channel_tail = &element->next;
-  return 1;
+  return MOBERG_OK;
 err:
-  return 0;
+  return MOBERG_ERRNO(ENOMEM);
 }
 
-static int map(struct moberg_device* device,
-               struct moberg_channel *channel)
+static struct moberg_status map(
+  struct moberg_device* device,
+  struct moberg_channel *channel)
 {
-  int result = 0;
+  struct moberg_status result = MOBERG_ERRNO(EINVAL);
  
-  if (device->range->kind == channel->kind &&
-      device->range->min <= device->range->max) {
-    result = add_channel(device, device->range->kind, device->range->min,
-                         (union channel) { .channel=channel });
-    device->range->min++;
+  if (device->range->kind != channel->kind) {
+    return MOBERG_ERRNO(EINVAL);
   }
-  return result;
+  if (device->range->min > device->range->max) {
+    return MOBERG_ERRNO(ENOSPC);
+  }
+  result = add_channel(device, device->range->kind, device->range->min,
+                       (union channel) { .channel=channel });
+  if (! OK(result)) {
+    return result;
+  }
+  device->range->min++;
+  return MOBERG_OK;
   
 }
 
-int moberg_device_parse_map(struct moberg_device* device,
-                            struct moberg_parser_context *parser,
-                            enum moberg_channel_kind kind,
-                            int min,
-                            int max)
+struct moberg_status moberg_device_parse_map(
+  struct moberg_device* device,
+  struct moberg_parser_context *parser,
+  enum moberg_channel_kind kind,
+  int min,
+  int max)
 {
-  int result;
+  struct moberg_status result;
   struct map_range r = {
     .device=device,
     .kind=kind,
@@ -178,14 +211,14 @@ int moberg_device_install_channels(struct moberg_device *device,
   return 1;
 }
 
-int moberg_device_start(struct moberg_device *device,
-                        FILE *f)
+struct moberg_status moberg_device_start(struct moberg_device *device,
+                                         FILE *f)
 {
   return device->driver.start(device->device_context, f);
 }
 
-int moberg_device_stop(struct moberg_device *device,
-                       FILE *f)
+struct moberg_status moberg_device_stop(struct moberg_device *device,
+                                        FILE *f)
 {
   return device->driver.stop(device->device_context, f);
 }

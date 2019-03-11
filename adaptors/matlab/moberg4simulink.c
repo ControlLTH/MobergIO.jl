@@ -1,8 +1,34 @@
+/*
+    moberg4simulink.c -- moberg interface for simulink MEX functions
+
+    Copyright (C) 2019 Anders Blomdell <anders.blomdell@gmail.com>
+
+    This file is part of Moberg.
+
+    Moberg is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <moberg.h>
 #include <moberg4simulink.h>
+
+static int inline OK(struct moberg_status status)
+{
+  return moberg_OK(status);
+}
 
 static struct channel {
   struct channel *next;
@@ -68,12 +94,13 @@ struct moberg_analog_in *moberg4simulink_analog_in_open(int index)
 {
   up();
   struct channel *result = malloc(sizeof(*result));
-  if (result && moberg_analog_in_open(g_moberg.moberg, index,
-                                      &result->analog_in)) {
+  if (result && OK(moberg_analog_in_open(g_moberg.moberg, index,
+                                         &result->analog_in))) {
     list_insert(&analog_in_list, result);
     return &result->analog_in;
   } else {
     down();
+    if (result) { free(result); }
     return NULL;
   }
 }
@@ -93,12 +120,13 @@ struct moberg_analog_out *moberg4simulink_analog_out_open(int index)
   {
   up();
   struct channel *result = malloc(sizeof(*result));
-  if (result && moberg_analog_out_open(g_moberg.moberg, index,
-                                      &result->analog_out)) {
+  if (result && OK(moberg_analog_out_open(g_moberg.moberg, index,
+                                          &result->analog_out))) {
     list_insert(&analog_out_list, result);
     return &result->analog_out;
   } else {
     down();
+    if (result) { free(result); }
     return NULL;
   }
 }
@@ -118,12 +146,13 @@ struct moberg_digital_in *moberg4simulink_digital_in_open(int index)
 {
   up();
   struct channel *result = malloc(sizeof(*result));
-  if (result && moberg_digital_in_open(g_moberg.moberg, index,
-                                      &result->digital_in)) {
+  if (result && OK(moberg_digital_in_open(g_moberg.moberg, index,
+                                          &result->digital_in))) {
     list_insert(&digital_in_list, result);
     return &result->digital_in;
   } else {
     down();
+    if (result) { free(result); }
     return NULL;
   }
 }
@@ -144,12 +173,13 @@ struct moberg_digital_out *moberg4simulink_digital_out_open(int index)
 {
   up();
   struct channel *result = malloc(sizeof(*result));
-  if (result && moberg_digital_out_open(g_moberg.moberg, index,
-                                      &result->digital_out)) {
+  if (result && OK(moberg_digital_out_open(g_moberg.moberg, index,
+                                           &result->digital_out))) {
     list_insert(&digital_out_list, result);
     return &result->digital_out;
   } else {
     down();
+    if (result) { free(result); }
     return NULL;
   }
 }
@@ -170,12 +200,13 @@ struct moberg_encoder_in *moberg4simulink_encoder_in_open(int index)
 {
   up();
   struct channel *result = malloc(sizeof(*result));
-  if (result && moberg_encoder_in_open(g_moberg.moberg, index,
-                                       &result->encoder_in)) {
+  if (result && OK(moberg_encoder_in_open(g_moberg.moberg, index,
+                                          &result->encoder_in))) {
     list_insert(&encoder_in_list, result);
     return &result->encoder_in;
   } else {
     down();
+    if (result) { free(result); }
     return NULL;
   }
 }

@@ -1,14 +1,34 @@
-#include <moberg_config.h>
-#include <moberg_parser.h>
-#include <moberg_module.h>
-#include <moberg_device.h>
+/*
+    serial2002.c -- serial2002 plugin for moberg
+
+    Copyright (C) 2019 Anders Blomdell <anders.blomdell@gmail.com>
+
+    This file is part of Moberg.
+
+    Moberg is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-typedef enum moberg_parser_token_kind kind_t;
-typedef struct moberg_parser_token token_t;
-typedef struct moberg_parser_context context_t;
+#include <errno.h>
+#include <moberg.h>
+#include <moberg_config.h>
+#include <moberg_device.h>
+#include <moberg_inline.h>
+#include <moberg_module.h>
+#include <moberg_parser.h>
 
 struct moberg_device_context {
   struct moberg *moberg;
@@ -122,20 +142,7 @@ static void init_channel(
   channel->action = action;
 };
 
-static inline int acceptsym(context_t *c,
-                            kind_t kind,
-                            token_t *token)
-{
-  return moberg_parser_acceptsym(c, kind, token);
-}
-  
-static inline int acceptkeyword(context_t *c,
-				const char *keyword)
-{
-  return moberg_parser_acceptkeyword(c, keyword);
-}
-  
-static int parse_config(
+static struct moberg_status parse_config(
   struct moberg_device_context *device,
   struct moberg_parser_context *c)
 {
@@ -149,6 +156,7 @@ static int parse_config(
       if (! acceptsym(c, tok_STRING, &name)) { goto syntax_err; }
       if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
       device->name = strndup(name.u.idstr.value, name.u.idstr.length);
+      if (! device->name) { goto err_enomem; }
     } else if (acceptkeyword(c, "baud")) {
       token_t baud;
       if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
@@ -159,13 +167,14 @@ static int parse_config(
       goto syntax_err;
     }
   }
-  return 1;
+  return MOBERG_OK;
+err_enomem:
+  return MOBERG_ERRNO(ENOMEM);  
 syntax_err:
-  moberg_parser_failed(c, stderr);
-  return 0;
+  return moberg_parser_failed(c, stderr);
 }
 
-static int parse_map(
+static struct moberg_status parse_map(
   struct moberg_device_context *device,
   struct moberg_parser_context *c,
   enum moberg_channel_kind ignore,
@@ -191,103 +200,94 @@ static int parse_map(
   for (int i = min.u.integer.value ; i <= max.u.integer.value ; i++) {
     switch (kind) {
       case chan_ANALOGIN: {
-        struct moberg_channel_analog_in *channel =
-          malloc(sizeof(*channel));
-        
-        if (channel) {
-          init_channel(&channel->channel,
-                       channel,
-                       &channel->channel_context,
-                       device,
-                       kind,
-                       (union moberg_channel_action) {
-                         .analog_in.context=channel,
-                         .analog_in.read=NULL });
-          map->map(map->device, &channel->channel);
-        }
+        struct moberg_channel_analog_in *channel = malloc(sizeof(*channel));
+
+        if (! channel) { goto err_enomem; }
+        init_channel(&channel->channel,
+                     channel,
+                     &channel->channel_context,
+                     device,
+                     kind,
+                     (union moberg_channel_action) {
+                       .analog_in.context=channel,
+                       .analog_in.read=NULL });
+        map->map(map->device, &channel->channel);
       } break;
       case chan_ANALOGOUT: {
-        struct moberg_channel_analog_out *channel =
-          malloc(sizeof(*channel));
+        struct moberg_channel_analog_out *channel = malloc(sizeof(*channel));
         
-        if (channel) {
-          init_channel(&channel->channel,
-                       channel,
-                       &channel->channel_context,
-                       device,
-                       kind,
-                       (union moberg_channel_action) {
-                         .analog_out.context=channel,
-                         .analog_out.write=NULL });
-          map->map(map->device, &channel->channel);
-        }
+        if (! channel) { goto err_enomem; }
+        init_channel(&channel->channel,
+                     channel,
+                     &channel->channel_context,
+                     device,
+                     kind,
+                     (union moberg_channel_action) {
+                       .analog_out.context=channel,
+                       .analog_out.write=NULL });
+        map->map(map->device, &channel->channel);
       } break;
       case chan_DIGITALIN: {
-        struct moberg_channel_digital_in *channel =
-          malloc(sizeof(*channel));
-        
-        if (channel) {
-          init_channel(&channel->channel,
-                       channel,
-                       &channel->channel_context,
-                       device,
-                       kind,
-                       (union moberg_channel_action) {
-                         .digital_in.context=channel,
+        struct moberg_channel_digital_in *channel = malloc(sizeof(*channel));
+
+        if (! channel) { goto err_enomem; }
+        init_channel(&channel->channel,
+                     channel,
+                     &channel->channel_context,
+                     device,
+                     kind,
+                     (union moberg_channel_action) {
+                       .digital_in.context=channel,
                          .digital_in.read=NULL });
-          map->map(map->device, &channel->channel);
-        }
+        map->map(map->device, &channel->channel);
       } break;
       case chan_DIGITALOUT: {
-        struct moberg_channel_digital_out *channel =
-          malloc(sizeof(*channel));
-        
-        if (channel) {
-          init_channel(&channel->channel,
-                       channel,
-                       &channel->channel_context,
-                       device,
-                       kind,
-                       (union moberg_channel_action) {
-                         .digital_out.context=channel,
-                         .digital_out.write=NULL });
-          map->map(map->device, &channel->channel);
-        }
+        struct moberg_channel_digital_out *channel = malloc(sizeof(*channel));
+
+        if (! channel) { goto err_enomem; }        
+        init_channel(&channel->channel,
+                     channel,
+                     &channel->channel_context,
+                     device,
+                     kind,
+                     (union moberg_channel_action) {
+                       .digital_out.context=channel,
+                       .digital_out.write=NULL });
+        map->map(map->device, &channel->channel);
       } break;
       case chan_ENCODERIN: {
-        struct moberg_channel_encoder_in *channel =
-          malloc(sizeof(*channel));
+        struct moberg_channel_encoder_in *channel = malloc(sizeof(*channel));
         
-        if (channel) {
-          init_channel(&channel->channel,
-                       channel,
-                       &channel->channel_context,
-                       device,
-                       kind,
-                       (union moberg_channel_action) {
-                         .encoder_in.context=channel,
-                         .encoder_in.read=NULL });
-          map->map(map->device, &channel->channel);
-        }
+        if (! channel) { goto err_enomem; }
+        init_channel(&channel->channel,
+                     channel,
+                     &channel->channel_context,
+                     device,
+                     kind,
+                     (union moberg_channel_action) {
+                       .encoder_in.context=channel,
+                       .encoder_in.read=NULL });
+        map->map(map->device, &channel->channel);
       } break;
     }
   }
-  return 1;
+  return MOBERG_OK;
+err_enomem:
+  return MOBERG_ERRNO(ENOMEM);
 syntax_err:
-  moberg_parser_failed(c, stderr);
-  return 0;
+  return moberg_parser_failed(c, stderr);
 }
 
-static int start(struct moberg_device_context *device,
-                 FILE *f)
+static struct moberg_status start(struct moberg_device_context *device,
+                                  FILE *f)
 {
-  return 1;
+  return MOBERG_OK;
 }
 
-static int stop(struct moberg_device_context *device,
-                 FILE *f)
+static struct moberg_status stop(struct moberg_device_context *device,
+                                 FILE *f)
 {
-  return 1;
+  return MOBERG_OK;
 }
 
 struct moberg_device_driver moberg_device_driver = {

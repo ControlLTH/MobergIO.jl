@@ -1,16 +1,35 @@
-#include <moberg_config.h>
-#include <moberg_parser.h>
-#include <moberg_module.h>
-#include <moberg_device.h>
+/*
+    comedi.c -- comedi plugin for moberg
+
+    Copyright (C) 2019 Anders Blomdell <anders.blomdell@gmail.com>
+
+    This file is part of Moberg.
+
+    Moberg is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+    
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <comedilib.h>
-
-typedef enum moberg_parser_token_kind kind_t;
-typedef struct moberg_parser_token token_t;
-typedef struct moberg_parser_ident ident_t;
-typedef struct moberg_parser_context context_t;
+#include <moberg.h>
+#include <moberg_config.h>
+#include <moberg_device.h>
+#include <moberg_inline.h>
+#include <moberg_module.h>
+#include <moberg_parser.h>
 
 struct moberg_device_context {
   struct moberg *moberg;
@@ -70,26 +89,31 @@ struct moberg_channel_encoder_in {
   struct moberg_channel_context channel_context;
 };
 
-static int analog_in_read(struct moberg_channel_analog_in *analog_in,
-                          double *value)
+static struct moberg_status analog_in_read(
+  struct moberg_channel_analog_in *analog_in,
+  double *value)
 {
-  if (! value) { goto err; }
+  if (! value) { goto err_einval; }
   struct channel_descriptor descriptor = analog_in->channel_context.descriptor;
   lsampl_t data;
-  comedi_data_read(analog_in->channel_context.device->comedi.handle,
-                   descriptor.subdevice,
-                   descriptor.subchannel,
-                   0, 0, &data);
+  if (0 > comedi_data_read(analog_in->channel_context.device->comedi.handle,
+                           descriptor.subdevice,
+                           descriptor.subchannel,
+                           0, 0, &data)) {
+    goto err_errno;
+  }
   *value = descriptor.min + data * descriptor.delta;
-  return 1;
-err:
-  return 0;
+  return MOBERG_OK;
+err_einval:
+  return MOBERG_ERRNO(EINVAL);
+err_errno:
+  return MOBERG_ERRNO(comedi_errno());
 }
 
-static int analog_out_write(struct moberg_channel_analog_out *analog_out,
-                            double value)
+static struct moberg_status analog_out_write(
+  struct moberg_channel_analog_out *analog_out,
+  double value)
 {
-  if (! value) { goto err; }
   struct channel_descriptor descriptor = analog_out->channel_context.descriptor;
   lsampl_t data;
   if (value < descriptor.min) {
@@ -104,60 +128,73 @@ static int analog_out_write(struct moberg_channel_analog_out *analog_out,
   } else if (data > descriptor.maxdata) {
     data = descriptor.maxdata;
   }
-  comedi_data_write(analog_out->channel_context.device->comedi.handle,
-                   descriptor.subdevice,
-                   descriptor.subchannel,
-                   0, 0, data);
-  return 1;
-err:
-  return 0;
+  if (0 > comedi_data_write(analog_out->channel_context.device->comedi.handle,
+                            descriptor.subdevice,
+                            descriptor.subchannel,
+                            0, 0, data)) {
+    goto err_errno;
+  }
+  return MOBERG_OK;
+err_errno:
+  return MOBERG_ERRNO(comedi_errno());
 }
 
-static int digital_in_read(struct moberg_channel_digital_in *digital_in,
-                           int *value)
+static struct moberg_status digital_in_read(
+  struct moberg_channel_digital_in *digital_in,
+  int *value)
 {
-  if (! value) { goto err; }
+  if (! value) { goto err_einval; }
   struct channel_descriptor descriptor = digital_in->channel_context.descriptor;
   lsampl_t data;
-  comedi_data_read(digital_in->channel_context.device->comedi.handle,
-                   descriptor.subdevice,
-                   descriptor.subchannel,
-                   0, 0, &data);
+  if (0 > comedi_data_read(digital_in->channel_context.device->comedi.handle,
+                           descriptor.subdevice,
+                           descriptor.subchannel,
+                           0, 0, &data)) {
+    goto err_errno;
+  }
   *value = data;
-  return 1;
-err:
-  return 0;
+  return MOBERG_OK;
+err_einval:
+  return MOBERG_ERRNO(EINVAL);
+err_errno:
+  return MOBERG_ERRNO(comedi_errno());
 }
 
-static int digital_out_write(struct moberg_channel_digital_out *digital_out,
-                             int value)
+static struct moberg_status digital_out_write(
+  struct moberg_channel_digital_out *digital_out,
+  int value)
 {
-  if (! value) { goto err; }
   struct channel_descriptor descriptor = digital_out->channel_context.descriptor;
   lsampl_t data = value==0?0:1;
-  comedi_data_write(digital_out->channel_context.device->comedi.handle,
-                   descriptor.subdevice,
-                   descriptor.subchannel,
-                   0, 0, data);
-  return 1;
-err:
-  return 0;
+  if (0 > comedi_data_write(digital_out->channel_context.device->comedi.handle,
+                            descriptor.subdevice,
+                            descriptor.subchannel,
+                            0, 0, data)) {
+    goto err_errno;
+  }
+  return MOBERG_OK;
+err_errno:
+  return MOBERG_ERRNO(comedi_errno());
 }
 
-static int encoder_in_read(struct moberg_channel_encoder_in *encoder_in,
+static struct moberg_status encoder_in_read(struct moberg_channel_encoder_in *encoder_in,
                            long *value)
 {
-  if (! value) { goto err; }
+  if (! value) { goto err_einval; }
   struct channel_descriptor descriptor = encoder_in->channel_context.descriptor;
   lsampl_t data;
-  comedi_data_read(encoder_in->channel_context.device->comedi.handle,
-                   descriptor.subdevice,
-                   descriptor.subchannel,
-                   0, 0, &data);
+   if (0 > comedi_data_read(encoder_in->channel_context.device->comedi.handle,
+                            descriptor.subdevice,
+                            descriptor.subchannel,
+                            0, 0, &data)) {
+    goto err_errno;
+  }
   *value = data - descriptor.maxdata / 2;
-  return 1;
-err:
-  return 0;
+  return MOBERG_OK;
+err_einval:
+  return MOBERG_ERRNO(EINVAL);
+err_errno:
+  return MOBERG_ERRNO(comedi_errno());
 }
 
 static struct moberg_device_context *new_context(struct moberg *moberg,
@@ -214,29 +251,32 @@ static int device_down(struct moberg_device_context *device)
   return result;
 }
 
-static int device_open(struct moberg_device_context *device)
+static struct moberg_status device_open(struct moberg_device_context *device)
 {
   if (device->comedi.count == 0) {
     device->comedi.handle = comedi_open(device->name);
     if (device->comedi.handle == NULL) {
-      goto err;
+      goto err_errno;
     }
   }
   device->comedi.count++;
-  return 1;
-err:
+  return MOBERG_OK;
+err_errno:
   fprintf(stderr, "Failed to open %s\n", device->name);
-  return 0;
+  return MOBERG_ERRNO(errno);
 }
 
-static int device_close(struct moberg_device_context *device)
+static struct moberg_status device_close(struct moberg_device_context *device)
 {
   device->comedi.count--;
   if (device->comedi.count == 0) {
-    comedi_close(device->comedi.handle);
+    if (comedi_close(device->comedi.handle)) {
+      goto err_errno;
+    }
   }
-
-  return 1;
+  return MOBERG_OK;
+err_errno:
+  return MOBERG_ERRNO(errno);
 }
 
 static int channel_up(struct moberg_channel *channel)
@@ -257,10 +297,11 @@ static int channel_down(struct moberg_channel *channel)
   return channel->context->use_count;
 }
 
-static int channel_open(struct moberg_channel *channel)
+static struct moberg_status channel_open(struct moberg_channel *channel)
 {
+  struct moberg_status result = device_open(channel->context->device);
+  if (! OK(result)) { goto err_result; }
   channel_up(channel);
-  if (! device_open(channel->context->device)) { goto err; }
   lsampl_t maxdata;
   comedi_range *range;
           
@@ -277,29 +318,33 @@ static int channel_open(struct moberg_channel *channel)
             channel->context->device->name, 
             channel->context->descriptor.subdevice, 
             channel->context->descriptor.subchannel);
-    goto err;
+    goto err_enodata;
   }
   if (! range) {
     fprintf(stderr, "Failed to get range for %s[%d][%d]\n",
             channel->context->device->name, 
             channel->context->descriptor.subdevice, 
             channel->context->descriptor.subchannel);
-    goto err;
+    goto err_enodata;
   }
   channel->context->descriptor.maxdata = maxdata;
   channel->context->descriptor.min = range->min;
   channel->context->descriptor.max = range->max;
   channel->context->descriptor.delta = (range->max - range->min) / maxdata;
   if (channel->kind == chan_DIGITALIN) {
-    comedi_dio_config(channel->context->device->comedi.handle,
-                      channel->context->descriptor.subdevice,
-                      channel->context->descriptor.subchannel,
-                      0);
+    if (comedi_dio_config(channel->context->device->comedi.handle,
+                          channel->context->descriptor.subdevice,
+                          channel->context->descriptor.subchannel,
+                          0)) {
+      goto err_errno;
+    }
   } else if (channel->kind == chan_DIGITALOUT) {
-    comedi_dio_config(channel->context->device->comedi.handle,
-                      channel->context->descriptor.subdevice,
-                      channel->context->descriptor.subchannel,
-                      1);
+    if(comedi_dio_config(channel->context->device->comedi.handle,
+                         channel->context->descriptor.subdevice,
+                         channel->context->descriptor.subchannel,
+                         1)) {
+      goto err_errno;
+    }
   }
   if (channel->context->descriptor.route != -1) {
     comedi_insn insn;
@@ -312,18 +357,27 @@ static int channel_open(struct moberg_channel *channel)
     insn.n = sizeof(data) / sizeof(data[0]);
     data[0] = INSN_CONFIG_SET_ROUTING;
     data[1] = channel->context->descriptor.route;
-    comedi_do_insn(channel->context->device->comedi.handle, &insn);
+    if (comedi_do_insn(channel->context->device->comedi.handle, &insn)) {
+      goto err_errno;
+    }
   }
-  return 1;
-err:
-  return 0;
+  return MOBERG_OK;
+err_errno:
+  return MOBERG_ERRNO(errno);
+err_enodata:
+  return MOBERG_ERRNO(ENODATA);
+err_result:
+  return result;
 }
 
-static int channel_close(struct moberg_channel *channel)
+static struct moberg_status channel_close(struct moberg_channel *channel)
 {
-  device_close(channel->context->device);
   channel_down(channel);
-  return 1;  
+  struct moberg_status result = device_close(channel->context->device);
+  if (! OK(result)) { goto err_result; }
+  return MOBERG_OK;
+err_result:
+  return result;
 }
 
 static void init_channel(struct moberg_channel *channel,
@@ -348,57 +402,47 @@ static void init_channel(struct moberg_channel *channel,
   channel->action = action;
 };
 
-static inline int acceptsym(context_t *c,
-			   kind_t kind,
-			   token_t *token)
-{
-  return moberg_parser_acceptsym(c, kind, token);
-}
-  
-static inline int acceptkeyword(context_t *c,
-				const char *keyword)
-{
-  return moberg_parser_acceptkeyword(c, keyword);
-}
-
-static int append_modprobe(struct moberg_device_context *device,
-                           token_t token)
+static struct moberg_status append_modprobe(
+  struct moberg_device_context *device,
+  token_t token)
 {
   struct idstr *modprobe = malloc(sizeof(*modprobe));
-  if (! modprobe) { goto err; }
+  if (! modprobe) { goto err_enomem; }
   modprobe->value = strndup(token.u.idstr.value, token.u.idstr.length);
   if (! modprobe->value) { goto free_modprobe; }
   modprobe->prev = device->modprobe_list.prev;
   modprobe->next = modprobe->prev->next;
   modprobe->prev->next = modprobe;
   modprobe->next->prev = modprobe;
-  return 1;
+  return MOBERG_OK;
 free_modprobe:
   free(modprobe);
-err:
-  return 0;
+err_enomem:
+  return MOBERG_ERRNO(ENOMEM);
 }
-  
-static int append_config(struct moberg_device_context *device,
-                           token_t token)
+
+static struct moberg_status append_config(
+  struct moberg_device_context *device,
+  token_t token)
 {
   struct idstr *config = malloc(sizeof(*config));
-  if (! config) { goto err; }
+  if (! config) { goto err_enomem; }
   config->value = strndup(token.u.idstr.value, token.u.idstr.length);
   if (! config->value) { goto free_config; }
   config->prev = device->config_list.prev;
   config->next = config->prev->next;
   config->prev->next = config;
   config->next->prev = config;
-  return 1;
+  return MOBERG_OK;
 free_config:
   free(config);
-err:
-  return 0;
+err_enomem:
+  return MOBERG_ERRNO(ENOMEM);
 }
   
-static int parse_config(struct moberg_device_context *device,
-                        struct moberg_parser_context *c)
+static struct moberg_status parse_config(
+  struct moberg_device_context *device,
+  struct moberg_parser_context *c)
 {
   if (! acceptsym(c, tok_LBRACE, NULL)) { goto syntax_err; }
   for (;;) {
@@ -410,6 +454,7 @@ static int parse_config(struct moberg_device_context *device,
       if (! acceptsym(c, tok_STRING, &name)) { goto syntax_err; }
       if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
       device->name = strndup(name.u.idstr.value, name.u.idstr.length);
+      if (! device->name) { goto err_enomem; }
     } else if (acceptkeyword(c, "config")) {
       if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
       if (! acceptsym(c, tok_LBRACKET, NULL)) { goto syntax_err; }
@@ -444,33 +489,35 @@ static int parse_config(struct moberg_device_context *device,
       goto syntax_err;
     }
   }
-  return 1;
+  return MOBERG_OK;
+err_enomem:
+  return MOBERG_ERRNO(ENOMEM);  
 syntax_err:
-  moberg_parser_failed(c, stderr);
-  return 0;
+  return moberg_parser_failed(c, stderr);
 }
 
-static int parse_map(struct moberg_device_context *device,
-                     struct moberg_parser_context *c,
-                     enum moberg_channel_kind kind,
-                     struct moberg_channel_map *map)
+static struct moberg_status parse_map(
+  struct moberg_device_context *device,
+  struct moberg_parser_context *c,
+  enum moberg_channel_kind kind,
+  struct moberg_channel_map *map)
 {
   token_t min, max, route={ .u.integer.value=-1 };
 
-  if (! acceptsym(c, tok_LBRACE, NULL)) { goto err; }
+  if (! acceptsym(c, tok_LBRACE, NULL)) { goto syntax_err; }
   for (;;) {
     token_t subdevice;
-    if (! acceptkeyword(c, "subdevice") != 0) {  goto err; }
-    if (! acceptsym(c, tok_LBRACKET, NULL)) { goto err; }
-    if (! acceptsym(c, tok_INTEGER, &subdevice)) { goto err; }
-    if (! acceptsym(c, tok_RBRACKET, NULL)) { goto err; }
+    if (! acceptkeyword(c, "subdevice") != 0) {  goto syntax_err; }
+    if (! acceptsym(c, tok_LBRACKET, NULL)) { goto syntax_err; }
+    if (! acceptsym(c, tok_INTEGER, &subdevice)) { goto syntax_err; }
+    if (! acceptsym(c, tok_RBRACKET, NULL)) { goto syntax_err; }
     if (acceptkeyword(c, "route")) {
-      if (! acceptsym(c, tok_INTEGER, &route)) { goto err; }
+      if (! acceptsym(c, tok_INTEGER, &route)) { goto syntax_err; }
     }
-    if (! acceptsym(c, tok_LBRACKET, NULL)) { goto err; }
-    if (! acceptsym(c, tok_INTEGER, &min)) { goto err; }
+    if (! acceptsym(c, tok_LBRACKET, NULL)) { goto syntax_err; }
+    if (! acceptsym(c, tok_INTEGER, &min)) { goto syntax_err; }
     if (acceptsym(c, tok_COLON, NULL)) { 
-      if (! acceptsym(c, tok_INTEGER, &max)) { goto err; }
+      if (! acceptsym(c, tok_INTEGER, &max)) { goto syntax_err; }
     } else {
       max = min;
     }
@@ -485,105 +532,96 @@ static int parse_map(struct moberg_device_context *device,
       };
       switch (kind) {
         case chan_ANALOGIN: {
-          struct moberg_channel_analog_in *channel =
-            malloc(sizeof(*channel));
+          struct moberg_channel_analog_in *channel = malloc(sizeof(*channel));
           
-          if (channel) {
-            init_channel(&channel->channel,
-                         channel,
-                         &channel->channel_context,
-                         device,
-                         descriptor,
-                         kind,
-                         (union moberg_channel_action) {
-                           .analog_in.context=channel,
-                           .analog_in.read=analog_in_read });
-            map->map(map->device, &channel->channel);
-          }
+          if (! channel) { goto err_enomem; }
+          init_channel(&channel->channel,
+                       channel,
+                       &channel->channel_context,
+                       device,
+                       descriptor,
+                       kind,
+                       (union moberg_channel_action) {
+                         .analog_in.context=channel,
+                         .analog_in.read=analog_in_read });
+          map->map(map->device, &channel->channel);
         } break;
         case chan_ANALOGOUT: {
-          struct moberg_channel_analog_out *channel =
-            malloc(sizeof(*channel));
+          struct moberg_channel_analog_out *channel = malloc(sizeof(*channel));
           
-          if (channel) {
-            init_channel(&channel->channel,
-                         channel,
-                         &channel->channel_context,
-                         device,
-                         descriptor,
-                         kind,
-                         (union moberg_channel_action) {
-                           .analog_out.context=channel,
-                           .analog_out.write=analog_out_write });
-            map->map(map->device, &channel->channel);
-          }
+          if (! channel) { goto err_enomem; }
+          init_channel(&channel->channel,
+                       channel,
+                       &channel->channel_context,
+                       device,
+                       descriptor,
+                       kind,
+                       (union moberg_channel_action) {
+                         .analog_out.context=channel,
+                         .analog_out.write=analog_out_write });
+          map->map(map->device, &channel->channel);
         } break;
         case chan_DIGITALIN: {
-          struct moberg_channel_digital_in *channel =
-            malloc(sizeof(*channel));
+          struct moberg_channel_digital_in *channel = malloc(sizeof(*channel));
           
-          if (channel) {
-            init_channel(&channel->channel,
-                         channel,
-                         &channel->channel_context,
-                         device,
-                         descriptor,
-                         kind,
-                         (union moberg_channel_action) {
-                           .digital_in.context=channel,
-                           .digital_in.read=digital_in_read });
-            map->map(map->device, &channel->channel);
-          }
+          if (!channel)  { goto err_enomem; }
+          init_channel(&channel->channel,
+                       channel,
+                       &channel->channel_context,
+                       device,
+                       descriptor,
+                       kind,
+                       (union moberg_channel_action) {
+                         .digital_in.context=channel,
+                         .digital_in.read=digital_in_read });
+          map->map(map->device, &channel->channel);
         } break;
         case chan_DIGITALOUT: {
-          struct moberg_channel_digital_out *channel =
-            malloc(sizeof(*channel));
+          struct moberg_channel_digital_out *channel = malloc(sizeof(*channel));
           
-          if (channel) {
-            init_channel(&channel->channel,
-                         channel,
-                         &channel->channel_context,
-                         device,
-                         descriptor,
-                         kind,
-                         (union moberg_channel_action) {
-                           .digital_out.context=channel,
-                           .digital_out.write=digital_out_write });
-            map->map(map->device, &channel->channel);
-          }
+          if (!channel) { goto err_enomem; }
+          init_channel(&channel->channel,
+                       channel,
+                       &channel->channel_context,
+                       device,
+                       descriptor,
+                       kind,
+                       (union moberg_channel_action) {
+                         .digital_out.context=channel,
+                         .digital_out.write=digital_out_write });
+          map->map(map->device, &channel->channel);
         } break;
         case chan_ENCODERIN: {
-          struct moberg_channel_encoder_in *channel =
-            malloc(sizeof(*channel));
+          struct moberg_channel_encoder_in *channel = malloc(sizeof(*channel));
           
-          if (channel) {
-            init_channel(&channel->channel,
-                         channel,
-                         &channel->channel_context,
-                         device,
-                         descriptor,
-                         kind,
-                         (union moberg_channel_action) {
-                           .encoder_in.context=channel,
-                           .encoder_in.read=encoder_in_read });
-            map->map(map->device, &channel->channel);
-          }
+          if (! channel) { goto err_enomem; }
+          init_channel(&channel->channel,
+                       channel,
+                       &channel->channel_context,
+                       device,
+                       descriptor,
+                       kind,
+                       (union moberg_channel_action) {
+                         .encoder_in.context=channel,
+                         .encoder_in.read=encoder_in_read });
+          map->map(map->device, &channel->channel);
         } break;
       }
     }
-    if (! acceptsym(c, tok_RBRACKET, NULL)) { goto err; }
+    if (! acceptsym(c, tok_RBRACKET, NULL)) { goto syntax_err; }
     if (! acceptsym(c, tok_COMMA, NULL)) { break; }
     
   }
-  if (! acceptsym(c, tok_RBRACE, NULL)) { goto err; }
-  return 1;
-err:
-  moberg_parser_failed(c, stderr);
-  return 0;
+  if (! acceptsym(c, tok_RBRACE, NULL)) { goto syntax_err; }
+  return MOBERG_OK;
+err_enomem:
+  return MOBERG_ERRNO(ENOMEM);
+syntax_err:
+  return moberg_parser_failed(c, stderr);
 }
 
-static int start(struct moberg_device_context *device,
-                 FILE *f)
+static struct moberg_status start(struct moberg_device_context *device,
+                                  FILE *f)
 {
   for (struct idstr *e = device->modprobe_list.next ;
        e != &device->modprobe_list ;
@@ -604,11 +642,11 @@ static int start(struct moberg_device_context *device,
   }
   fprintf(f, "\n");
   
-  return 1;
+  return MOBERG_OK;
 }
 
-static int stop(struct moberg_device_context *device,
-                 FILE *f)
+static struct moberg_status stop(struct moberg_device_context *device,
+                                 FILE *f)
 {
   fprintf(f, "comedi_config --remove %s\n", device->name);
   for (struct idstr *e = device->modprobe_list.prev ;
@@ -616,7 +654,7 @@ static int stop(struct moberg_device_context *device,
        e = e->prev) {
     fprintf(f, "rmmod %s\n", e->value);
   }
-  return 1;
+  return MOBERG_OK;
 }
 
 struct moberg_device_driver moberg_device_driver = {

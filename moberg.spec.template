@@ -80,6 +80,7 @@ cp adaptors/matlab/Makefile.mex ${RPM_BUILD_ROOT}/opt/matlab/src/moberg/Makefile
 
 %files
 %defattr(-,root,root,-)
+%{_includedir}/moberg.h
 %{_libdir}/libmoberg.so
 %{_libdir}/libmoberg_serial2002.so
 
@@ -89,7 +90,7 @@ cp adaptors/matlab/Makefile.mex ${RPM_BUILD_ROOT}/opt/matlab/src/moberg/Makefile
 
 %files devel
 %defattr(-,root,root,-)
-%{_includedir}/moberg.h
+%{_includedir}/moberg_inline.h
 
 %files java
 %defattr(-,root,root,-)

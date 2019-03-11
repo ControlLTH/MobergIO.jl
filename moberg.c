@@ -1,3 +1,23 @@
+/*
+    moberg.c --  interface to moberg I/O system
+
+    Copyright (C) 2019 Anders Blomdell <anders.blomdell@gmail.com>
+
+    This file is part of Moberg.
+
+    Moberg is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
 #define _POSIX_C_SOURCE  200809L
 #define _GNU_SOURCE               /* scandirat */
 
@@ -10,10 +30,12 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <string.h>
+#include <errno.h>
 #include <moberg.h>
 #include <moberg_config.h>
-#include <moberg_parser.h>
+#include <moberg_inline.h>
 #include <moberg_module.h>
+#include <moberg_parser.h>
 
 struct moberg {
   struct moberg_config *config;
@@ -144,10 +166,11 @@ static void parse_config_dir_at(
   
 }
 
-static int install_channel(struct moberg *moberg,
-                           int index,
-                           struct moberg_device* device,
-                           struct moberg_channel *channel)
+static struct moberg_status install_channel(
+  struct moberg *moberg,
+  int index,
+  struct moberg_device* device,
+  struct moberg_channel *channel)
 {
   if (channel) {
     struct moberg_channel *old = NULL;
@@ -201,9 +224,9 @@ static int install_channel(struct moberg *moberg,
         break;
     }
   }
-  return 1;
+  return MOBERG_OK;
 err:
-  return 0;
+  return MOBERG_ERRNO(ENOMEM);
 }
 
 static int install_config(struct moberg *moberg)
@@ -218,6 +241,11 @@ static int install_config(struct moberg *moberg)
   } else {
     return moberg_config_install_channels(moberg->config, &install);
   }
+}
+
+int moberg_OK(struct moberg_status status)
+{
+  return status.result == 0;
 }
 
 struct moberg *moberg_new()
@@ -283,146 +311,221 @@ void moberg_free(struct moberg *moberg)
 
 /* Input/output */
 
-int moberg_analog_in_open(struct moberg *moberg,
-                          int index,
-                          struct moberg_analog_in *analog_in)
+struct moberg_status moberg_analog_in_open(
+  struct moberg *moberg,
+  int index,
+  struct moberg_analog_in *analog_in)
+{
+  if (! analog_in) {
+    return MOBERG_ERRNO(EINVAL);
+  }
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->analog_in, index, &channel);
+  if (! channel) {
+    return MOBERG_ERRNO(ENODEV);
+  } 
+  struct moberg_status result = channel->open(channel);
+  if (! OK(result)) {
+    return result;
+  }
+  *analog_in = channel->action.analog_in;
+  return MOBERG_OK;
+}
+
+struct moberg_status moberg_analog_in_close(
+  struct moberg *moberg,
+  int index,
+  struct moberg_analog_in analog_in)
 {
   struct moberg_channel *channel = NULL;
   channel_list_get(&moberg->analog_in, index, &channel);
-  if (channel) {
-    channel->open(channel);
-    *analog_in = channel->action.analog_in;
-    return 1;
+  if (! channel) {
+    return MOBERG_ERRNO(ENODEV);
   }
-  return 0;
+  if (channel->action.analog_in.context != analog_in.context) {
+    return MOBERG_ERRNO(EINVAL);
+  }
+  struct moberg_status result = channel->close(channel);
+  if (! OK(result)) {
+    return result;
+  }
+  return MOBERG_OK;
 }
 
-int moberg_analog_in_close(struct moberg *moberg,
-                           int index,
-                           struct moberg_analog_in analog_in)
+struct moberg_status moberg_analog_out_open(
+  struct moberg *moberg,
+  int index,
+  struct moberg_analog_out *analog_out)
 {
-  struct moberg_channel *channel = NULL;
-  channel_list_get(&moberg->analog_in, index, &channel);
-  if (channel && channel->action.analog_in.context == analog_in.context) {
-    channel->close(channel);
+  if (! analog_out) {
+    return MOBERG_ERRNO(EINVAL);
   }
-  return 1;
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->analog_out, index, &channel);
+  if (! channel) {
+    return MOBERG_ERRNO(ENODEV);
+  } 
+  struct moberg_status result = channel->open(channel);
+  if (! OK(result)) {
+    return result;
+  }
+  *analog_out = channel->action.analog_out;
+  return MOBERG_OK;
 }
 
-int moberg_analog_out_open(struct moberg *moberg,
-                           int index,
-                           struct moberg_analog_out *analog_out)
+struct moberg_status moberg_analog_out_close(
+  struct moberg *moberg,
+  int index,
+  struct moberg_analog_out analog_out)
 {
   struct moberg_channel *channel = NULL;
   channel_list_get(&moberg->analog_out, index, &channel);
-  if (channel) {
-    channel->open(channel);
-    *analog_out = channel->action.analog_out;
-    return 1;
+  if (! channel) {
+    return MOBERG_ERRNO(ENODEV);
   }
-  return 0;
+  if (channel->action.analog_out.context != analog_out.context) {
+    return MOBERG_ERRNO(EINVAL);
+  }
+  struct moberg_status result = channel->close(channel);
+  if (! OK(result)) {
+    return result;
+  }
+  return MOBERG_OK;
 }
 
-int moberg_analog_out_close(struct moberg *moberg,
-                            int index,
-                            struct moberg_analog_out analog_out)
+struct moberg_status moberg_digital_in_open(
+  struct moberg *moberg,
+  int index,
+  struct moberg_digital_in *digital_in)
 {
-  struct moberg_channel *channel = NULL;
-  channel_list_get(&moberg->analog_out, index, &channel);
-  if (channel && channel->action.analog_out.context == analog_out.context) {
-    channel->close(channel);
+  if (! digital_in) {
+    return MOBERG_ERRNO(EINVAL);
   }
-  return 1;
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->digital_in, index, &channel);
+  if (! channel) {
+    return MOBERG_ERRNO(ENODEV);
+  } 
+  struct moberg_status result = channel->open(channel);
+  if (! OK(result)) {
+    return result;
+  }
+  *digital_in = channel->action.digital_in;
+  return MOBERG_OK;
 }
 
-int moberg_digital_in_open(struct moberg *moberg,
-                           int index,
-                           struct moberg_digital_in *digital_in)
+struct moberg_status moberg_digital_in_close(
+  struct moberg *moberg,
+  int index,
+  struct moberg_digital_in digital_in)
 {
   struct moberg_channel *channel = NULL;
   channel_list_get(&moberg->digital_in, index, &channel);
-  if (channel) {
-    channel->open(channel);
-    *digital_in = channel->action.digital_in;
-    return 1;
+  if (! channel) {
+    return MOBERG_ERRNO(ENODEV);
   }
-  return 0;
+  if (channel->action.digital_in.context != digital_in.context) {
+    return MOBERG_ERRNO(EINVAL);
+  }
+  struct moberg_status result = channel->close(channel);
+  if (! OK(result)) {
+    return result;
+  }
+  return MOBERG_OK;
 }
 
-int moberg_digital_in_close(struct moberg *moberg,
-                            int index,
-                            struct moberg_digital_in digital_in)
+struct moberg_status moberg_digital_out_open(
+  struct moberg *moberg,
+  int index,
+  struct moberg_digital_out *digital_out)
 {
-  struct moberg_channel *channel = NULL;
-  channel_list_get(&moberg->digital_in, index, &channel);
-  if (channel && channel->action.digital_in.context == digital_in.context) {
-    channel->close(channel);
+  if (! digital_out) {
+    return MOBERG_ERRNO(EINVAL);
   }
-  return 1;
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->digital_out, index, &channel);
+  if (! channel) {
+    return MOBERG_ERRNO(ENODEV);
+  } 
+  struct moberg_status result = channel->open(channel);
+  if (! OK(result)) {
+    return result;
+  }
+  *digital_out = channel->action.digital_out;
+  return MOBERG_OK;
 }
 
-int moberg_digital_out_open(struct moberg *moberg,
-                            int index,
-                            struct moberg_digital_out *digital_out)
+struct moberg_status moberg_digital_out_close(
+  struct moberg *moberg,
+  int index,
+  struct moberg_digital_out digital_out)
 {
   struct moberg_channel *channel = NULL;
   channel_list_get(&moberg->digital_out, index, &channel);
-  if (channel) {
-    channel->open(channel);
-    *digital_out = channel->action.digital_out;
-    return 1;
+  if (! channel) {
+    return MOBERG_ERRNO(ENODEV);
   }
-  return 0;
+  if (channel->action.digital_out.context != digital_out.context) {
+    return MOBERG_ERRNO(EINVAL);
+  }
+  struct moberg_status result = channel->close(channel);
+  if (! OK(result)) {
+    return result;
+  }
+  return MOBERG_OK;
 }
 
-int moberg_digital_out_close(struct moberg *moberg,
-                             int index,
-                             struct moberg_digital_out digital_out)
+struct moberg_status moberg_encoder_in_open(
+  struct moberg *moberg,
+  int index,
+  struct moberg_encoder_in *encoder_in)
 {
-  struct moberg_channel *channel = NULL;
-  channel_list_get(&moberg->digital_out, index, &channel);
-  if (channel && channel->action.digital_out.context == digital_out.context) {
-    channel->close(channel);
+  if (! encoder_in) {
+    return MOBERG_ERRNO(EINVAL);
   }
-  return 1;
+  struct moberg_channel *channel = NULL;
+  channel_list_get(&moberg->encoder_in, index, &channel);
+  if (! channel) {
+    return MOBERG_ERRNO(ENODEV);
+  } 
+  struct moberg_status result = channel->open(channel);
+  if (! OK(result)) {
+    return result;
+  }
+  *encoder_in = channel->action.encoder_in;
+  return MOBERG_OK;
 }
 
-int moberg_encoder_in_open(struct moberg *moberg,
-                           int index,
-                           struct moberg_encoder_in *encoder_in)
+struct moberg_status moberg_encoder_in_close(
+  struct moberg *moberg,
+  int index,
+  struct moberg_encoder_in encoder_in)
 {
   struct moberg_channel *channel = NULL;
   channel_list_get(&moberg->encoder_in, index, &channel);
-  if (channel) {
-    channel->open(channel);
-    *encoder_in = channel->action.encoder_in;
-    return 1;
+  if (! channel) {
+    return MOBERG_ERRNO(ENODEV);
   }
-  return 0;
-}
-
-int moberg_encoder_in_close(struct moberg *moberg,
-                            int index,
-                            struct moberg_encoder_in encoder_in)
-{
-  struct moberg_channel *channel = NULL;
-  channel_list_get(&moberg->encoder_in, index, &channel);
-  if (channel && channel->action.encoder_in.context == encoder_in.context) {
-    channel->close(channel);
+  if (channel->action.encoder_in.context != encoder_in.context) {
+    return MOBERG_ERRNO(EINVAL);
   }
-  return 1;
+  struct moberg_status result = channel->close(channel);
+  if (! OK(result)) {
+    return result;
+  }
+  return MOBERG_OK;
 }
 
 /* System init functionality (systemd/init/...) */
 
-int moberg_start(
+struct moberg_status moberg_start(
   struct moberg *moberg,
   FILE *f)
 {
   return moberg_config_start(moberg->config, f);
 }
 
-int moberg_stop(
+struct moberg_status moberg_stop(
   struct moberg *moberg,
   FILE *f)
 {

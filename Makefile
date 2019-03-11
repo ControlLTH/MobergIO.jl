@@ -71,3 +71,7 @@ build/libmoberg.so: build/lib/moberg_config.o
 build/libmoberg.so: build/lib/moberg_device.o
 build/libmoberg.so: build/lib/moberg_parser.o
 build/lib/%.o: %.h
+build/lib/%.o: moberg_inline.h
+build/lib/moberg.o: moberg_config.h
+build/lib/moberg.o: moberg_module.h
+build/lib/moberg.o: moberg_parser.h

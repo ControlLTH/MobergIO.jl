@@ -25,6 +25,11 @@
 #include <string.h>
 #include <moberg.h>
 
+static inline int OK(struct moberg_status status)
+{
+  return moberg_OK(status);
+}
+
 static void throwMoberg(JNIEnv *env, int chan, char *exceptionName)
 {
   jclass exceptionClass = 0;
@@ -182,7 +187,8 @@ Java_se_lth_control_realtime_moberg_Moberg_analogInOpen(
   if (! channel_up(&analog_in, index)) {
     struct channel channel;
     up();
-    if (! moberg_analog_in_open(g_moberg.moberg, index, &channel.analog_in)) {
+    if (! OK(moberg_analog_in_open(g_moberg.moberg, index,
+                                   &channel.analog_in))) {
       down();
       throwMobergDeviceDoesNotExistException(env, index);      
     } else {
@@ -230,7 +236,8 @@ Java_se_lth_control_realtime_moberg_Moberg_analogOutOpen(
   if (! channel_up(&analog_out, index)) {
     struct channel channel;
     up();
-    if (! moberg_analog_out_open(g_moberg.moberg, index, &channel.analog_out)) {
+    if (! OK(moberg_analog_out_open(g_moberg.moberg, index,
+                                    &channel.analog_out))) {
       down();
       throwMobergDeviceDoesNotExistException(env, index);      
     } else {
@@ -275,7 +282,8 @@ Java_se_lth_control_realtime_moberg_Moberg_digitalInOpen(
   if (! channel_up(&digital_in, index)) {
     struct channel channel;
     up();
-    if (! moberg_digital_in_open(g_moberg.moberg, index, &channel.digital_in)) {
+    if (! OK(moberg_digital_in_open(g_moberg.moberg, index,
+                                    &channel.digital_in))) {
       down();
       throwMobergDeviceDoesNotExistException(env, index);      
     } else {
@@ -322,7 +330,8 @@ Java_se_lth_control_realtime_moberg_Moberg_digitalOutOpen(
   if (! channel_up(&digital_out, index)) {
     struct channel channel;
     up();
-    if (! moberg_digital_out_open(g_moberg.moberg, index, &channel.digital_out)) {
+    if (! OK(moberg_digital_out_open(g_moberg.moberg, index,
+                                     &channel.digital_out))) {
       down();
       throwMobergDeviceDoesNotExistException(env, index);      
     } else {
@@ -366,7 +375,8 @@ Java_se_lth_control_realtime_moberg_Moberg_encoderInOpen(
   if (! channel_up(&encoder_in, index)) {
     struct channel channel;
     up();
-    if (! moberg_encoder_in_open(g_moberg.moberg, index, &channel.encoder_in)) {
+    if (! OK(moberg_encoder_in_open(g_moberg.moberg, index,
+                                    &channel.encoder_in))) {
       down();
       throwMobergDeviceDoesNotExistException(env, index);      
     } else {

@@ -1,3 +1,24 @@
+/*
+    moberg_module.h -- moberg module interface to parser
+
+    Copyright (C) 2019 Anders Blomdell <anders.blomdell@gmail.com>
+
+    This file is part of Moberg.
+
+    Moberg is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+    
 #ifndef __MOBERG_MODULE_H__
 #define __MOBERG_MODULE_H__
 
@@ -50,7 +71,7 @@ int moberg_parser_acceptkeyword(
   struct moberg_parser_context *c,
   const char *keyword);
 
-void moberg_parser_failed(
+struct moberg_status moberg_parser_failed(
   struct moberg_parser_context *c,
   FILE *f);
 
