@@ -1,0 +1,14 @@
+#!/usr/bin/sh
+
+BASENAME=`basename $0`
+cat > ${BASENAME}.java << EOF
+public class ${BASENAME} {
+  
+  public static void main(String[] args) {
+     System.out.println(System.getProperty("os.arch"));
+  }
+}
+EOF
+javac ${BASENAME}.java
+java ${BASENAME}
+rm ${BASENAME}.java ${BASENAME}.class

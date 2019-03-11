@@ -9,6 +9,7 @@ BuildRequires:  gcc
 BuildRequires:  comedilib-devel
 BuildRequires:  valgrind
 BuildRequires:  libxdg-basedir-devel
+BuildRequires:  java-devel
 
 %description
 Shared library for abstracting physical process I/O (analog, digital
@@ -30,12 +31,19 @@ Requires: %{name} = %{version}-%{release}
 Development files for %{name}
 
 %package matlab
-Summary: Matlab development files for %{name}
+Summary: Matlab support files for %{name}
 Requires: %{name} = %{version}-%{release}
 Requires: %{name}-devel = %{version}-%{release}
 
 %description matlab
-Matlab development files for %{name}
+Matlab support files for %{name}
+
+%package java
+Summary: Java support files for %{name}
+Requires: %{name} = %{version}-%{release}
+
+%description java
+Java support files for %{name}
 
 
 %prep

@@ -32,6 +32,10 @@ build/lib/%.o:	%.c Makefile | build/lib
 $(ADAPTORS) $(PLUGINS): 
 	$(MAKE) -C $@
 
+.PHONY: $(PLUGINS) $(ADAPTORS)
+$(ADAPTORS) $(PLUGINS): 
+	$(MAKE) -C $@
+
 .PHONY: TAR
 TAR:
 	git archive \
@@ -60,6 +64,7 @@ clean:
 	rm -f moberg-*.spec
 	rm -f moberg-*.tar.gz
 	make -C test clean
+	for d in $(ADAPTORS) ; do make -C $$d clean ; done
 
 build/libmoberg.so: build/lib/moberg.o
 build/libmoberg.so: build/lib/moberg_config.o
