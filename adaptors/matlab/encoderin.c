@@ -136,7 +136,12 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     for (i = 0 ; i < ssGetNumPWork(S) ; i++) {
       struct moberg_encoder_in *ein = (struct moberg_encoder_in*)pwork[i];
       long value;
-      ein->read(ein->context, &value);
+      if (! moberg_OK(ein->read(ein->context, &value))) {
+        static char error[256];
+        double *channel = mxGetPr(ssGetSFcnParam(S,1));
+        sprintf(error, "Failed to read encoderin #%d", (int)channel[i]);
+        ssSetErrorStatus(S, error);
+      }
       y[i] = value;
     }
   }

@@ -8,11 +8,11 @@ TARGETS=realtimer \
 	encoderin 
 
 EXTRAFLAGS_realtimer=
-EXTRAFLAGS_analogin=-lmoberg4simulink
-EXTRAFLAGS_analogout=-lmoberg4simulink
-EXTRAFLAGS_digitalin=-lmoberg4simulink
-EXTRAFLAGS_digitalout=-lmoberg4simulink
-EXTRAFLAGS_encoderin=-lmoberg4simulink
+EXTRAFLAGS_analogin=-lmoberg4simulink -lmoberg
+EXTRAFLAGS_analogout=-lmoberg4simulink -lmoberg
+EXTRAFLAGS_digitalin=-lmoberg4simulink -lmoberg
+EXTRAFLAGS_digitalout=-lmoberg4simulink -lmoberg
+EXTRAFLAGS_encoderin=-lmoberg4simulink -lmoberg
 
 all:	$(TARGETS:%=%.$(SUFFIX))
 

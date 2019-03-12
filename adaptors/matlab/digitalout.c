@@ -131,12 +131,17 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     y[0] = *up[0]+1;
   }
   {
-    InputRealPtrsType up = ssGetInputPortRealSignalPtrs(S,1);
     int i;
+    InputRealPtrsType up = ssGetInputPortRealSignalPtrs(S,1);
 
     for (i = 0 ; i < ssGetNumPWork(S) ; i++) {
       struct moberg_digital_out *dout = (struct moberg_digital_out*)pwork[i];
-      dout->write(dout->context, *up[i]);
+      if (! moberg_OK(dout->write(dout->context, *up[i]))) {
+        static char error[256];
+        double *channel = mxGetPr(ssGetSFcnParam(S,1));
+        sprintf(error, "Failed to write digitalout #%d", (int)channel[i]);
+        ssSetErrorStatus(S, error);
+      }
     }
   }
 }

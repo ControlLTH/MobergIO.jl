@@ -132,11 +132,12 @@ static void mdlOutputs(SimStruct *S, int_T tid)
   {
     int i;
     real_T *y = ssGetOutputPortRealSignal(S, 1);
-      
+
     for (i = 0 ; i < ssGetNumPWork(S) ; i++) {
       struct moberg_analog_in *ain = (struct moberg_analog_in*)pwork[i];
-      if (! ain->read(ain->context, &y[i])) {
+      if (! moberg_OK(ain->read(ain->context, &y[i]))) {
         static char error[256];
+        double *channel = mxGetPr(ssGetSFcnParam(S,1));
         sprintf(error, "Failed to read analogin #%d", (int)channel[i]);
         ssSetErrorStatus(S, error);
       }

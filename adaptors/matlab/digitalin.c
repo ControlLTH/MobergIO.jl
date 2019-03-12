@@ -137,7 +137,12 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     for (i = 0 ; i < ssGetNumPWork(S) ; i++) {
       struct moberg_digital_in *din = (struct moberg_digital_in*)pwork[i];
       int value;
-      din->read(din->context, &value);
+      if (! moberg_OK(din->read(din->context, &value))) {
+        static char error[256];
+        double *channel = mxGetPr(ssGetSFcnParam(S,1));
+        sprintf(error, "Failed to read digitalin #%d", (int)channel[i]);
+        ssSetErrorStatus(S, error);
+      }
       y[i] = value;
     }
   }

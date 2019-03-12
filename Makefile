@@ -1,6 +1,6 @@
 LIBRARIES=libmoberg.so
 MOBERG_VERSION=$(shell git describe --tags | sed -e 's/^v//;s/-/_/g' )
-CCFLAGS+=-Wall -Werror -I$(shell pwd) -g
+CCFLAGS+=-Wall -Werror -I$(shell pwd) -O3 -g
 LDFLAGS+=-L$(shell pwd)/build/ -lmoberg
 PLUGINS:=$(wildcard plugins/*)
 ADAPTORS:=$(wildcard adaptors/*)
@@ -8,13 +8,16 @@ export CCFLAGS LDFLAGS
 LDFLAGS_parse_config=-ldl
 #-export-dynamic
 
-all: $(LIBRARIES:%=build/%) $(PLUGINS) $(ADAPTORS)
+all: $(LIBRARIES:%=build/%) build/moberg $(PLUGINS) $(ADAPTORS)
 	echo $(PLUGINS)
 	echo $(CCFLAGS)
 
 build/libmoberg.so: Makefile | build
 	$(CC) -o $@ $(CCFLAGS) -shared -fPIC -I. \
 		$(filter %.o,$^) -lxdg-basedir -ldl
+
+build/moberg: moberg_tool.c Makefile | build
+	$(CC) -o $@ $(CCFLAGS) $< -L../build -lmoberg
 
 build/lib build:
 	mkdir -p $@
