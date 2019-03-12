@@ -17,7 +17,7 @@ build/libmoberg.so: Makefile | build
 		$(filter %.o,$^) -lxdg-basedir -ldl
 
 build/moberg: moberg_tool.c Makefile | build
-	$(CC) -o $@ $(CCFLAGS) $< -L../build -lmoberg
+	$(CC) -o $@ $(CCFLAGS) $< -Lbuild -lmoberg
 
 build/lib build:
 	mkdir -p $@
