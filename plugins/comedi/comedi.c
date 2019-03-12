@@ -332,17 +332,17 @@ static struct moberg_status channel_open(struct moberg_channel *channel)
   channel->context->descriptor.max = range->max;
   channel->context->descriptor.delta = (range->max - range->min) / maxdata;
   if (channel->kind == chan_DIGITALIN) {
-    if (comedi_dio_config(channel->context->device->comedi.handle,
-                          channel->context->descriptor.subdevice,
-                          channel->context->descriptor.subchannel,
-                          0)) {
+    if (0 > comedi_dio_config(channel->context->device->comedi.handle,
+                              channel->context->descriptor.subdevice,
+                              channel->context->descriptor.subchannel,
+                              0)) {
       goto err_errno;
     }
   } else if (channel->kind == chan_DIGITALOUT) {
-    if(comedi_dio_config(channel->context->device->comedi.handle,
-                         channel->context->descriptor.subdevice,
-                         channel->context->descriptor.subchannel,
-                         1)) {
+    if (0 > comedi_dio_config(channel->context->device->comedi.handle,
+                              channel->context->descriptor.subdevice,
+                              channel->context->descriptor.subchannel,
+                              1)) {
       goto err_errno;
     }
   }
