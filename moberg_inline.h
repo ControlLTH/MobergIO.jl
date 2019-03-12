@@ -27,8 +27,8 @@
 
 /* Error handling */
 
-#define MOBERG_OK (struct moberg_status){ .result=0, .error=NULL }
-#define MOBERG_ERRNO(errno) (struct moberg_status){ .result=errno, .error=NULL }
+#define MOBERG_OK (struct moberg_status){ .result=0 }
+#define MOBERG_ERRNO(errno) (struct moberg_status){ .result=errno }
 
 static int inline OK(struct moberg_status status)
 {

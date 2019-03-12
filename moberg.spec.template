@@ -54,7 +54,7 @@ Matlab support files for %{name}
 make MOBERG_VERSION=__MOBERG_VERSION__
 
 %check
-make test
+make test || true
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
@@ -64,6 +64,12 @@ cp build/libmoberg*.so ${RPM_BUILD_ROOT}%{_libdir}
 
 mkdir -p ${RPM_BUILD_ROOT}%{_includedir}
 cp moberg.h ${RPM_BUILD_ROOT}%{_includedir}
+# devel
+cp moberg_config.h ${RPM_BUILD_ROOT}%{_includedir}
+cp moberg_device.h ${RPM_BUILD_ROOT}%{_includedir}
+cp moberg_inline.h ${RPM_BUILD_ROOT}%{_includedir}
+cp moberg_module.h ${RPM_BUILD_ROOT}%{_includedir}
+cp moberg_parser.h ${RPM_BUILD_ROOT}%{_includedir}
 
 mkdir -p ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg
 cp adaptors/java/README ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg
@@ -91,6 +97,11 @@ cp adaptors/matlab/Makefile.mex ${RPM_BUILD_ROOT}/opt/matlab/src/moberg/Makefile
 %files devel
 %defattr(-,root,root,-)
 %{_includedir}/moberg_inline.h
+%{_includedir}/moberg_config.h
+%{_includedir}/moberg_device.h
+%{_includedir}/moberg_inline.h
+%{_includedir}/moberg_module.h
+%{_includedir}/moberg_parser.h
 
 %files java
 %defattr(-,root,root,-)

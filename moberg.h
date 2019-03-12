@@ -32,7 +32,6 @@ struct moberg_status {
   int result; /* == 0 -> OK 
                  <  0 -> moberg specific error
                  >  0 -> system error (see errno.h */
-  struct moberg_error *error;
 };
 
 int moberg_OK(struct moberg_status);
