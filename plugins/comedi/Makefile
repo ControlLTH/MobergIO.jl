@@ -1,14 +1,23 @@
 LIBRARIES=libmoberg_comedi.so
-CCFLAGS+=-Wall -Werror -I../.. -g
+CCFLAGS+=-Wall -Werror -I../.. -I. -O3 -g -fPIC
+LDFLAGS+=-Lbuild/ -lmoberg
+LDFLAGS_comedi=-shared -fPIC -L../../build -lmoberg  
 
-all:	$(LIBRARIES:%=../../build/%) 
+all:	$(LIBRARIES:%=build/%)
 
-../../build/libmoberg_comedi.so: comedi.c Makefile
-	$(CC) -o $@ $(CCFLAGS) -shared -fPIC -lcomedi -L../../build -lmoberg $<
+build/libmoberg_%.so: build/%.o Makefile | build
+	$(CC) $(LDFLAGS) $(LDFLAGS_$(*)) -o $@ $(filter %.o,$^)
 
-../../build/libmoberg_comedi.so: ../../moberg.h
-../../build/libmoberg_comedi.so: ../../moberg_config.h
-../../build/libmoberg_comedi.so: ../../moberg_device.h
-../../build/libmoberg_comedi.so: ../../moberg_inline.h
-../../build/libmoberg_comedi.so: ../../moberg_module.h
-../../build/libmoberg_comedi.so: ../../moberg_parser.h
+.PRECIOUS: build/%.o
+build/%.o:      %.c Makefile | build
+	$(CC) $(CCFLAGS) -c -o $@ $<
+
+build:
+	mkdir -p $@
+
+build/comedi.c: ../../moberg.h
+build/comedi.o: ../../moberg_config.h
+build/comedi.o: ../../moberg_device.h
+build/comedi.o: ../../moberg_inline.h
+build/comedi.o: ../../moberg_module.h
+build/comedi.o: ../../moberg_parser.h

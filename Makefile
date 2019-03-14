@@ -31,13 +31,15 @@ build/%.o:	%.c Makefile
 build/lib/%.o:	%.c Makefile | build/lib
 	$(CC) $(CCFLAGS) -c -fPIC -o $@ $<
 
-.PHONY: $(PLUGINS) $(ADAPTORS)
-$(ADAPTORS) $(PLUGINS): 
+.PHONY: $(ADAPTORS)
+$(ADAPTORS): Makefile
 	$(MAKE) -C $@
 
-.PHONY: $(PLUGINS) $(ADAPTORS)
-$(ADAPTORS) $(PLUGINS): 
+.PHONY: $(PLUGINS)
+$(PLUGINS): Makefile
 	$(MAKE) -C $@
+	cp $@/build/libmoberg_*.so build
+
 
 .PHONY: TAR
 TAR:
@@ -51,8 +53,7 @@ moberg-$(MOBERG_VERSION).spec: moberg.spec.template Makefile
 
 .PHONY: SRPM
 SRPM:	moberg-$(MOBERG_VERSION).spec TAR
-	rpmbuild --define "_sourcedir $$(pwd)" \
-		 -bs $<
+	rpmbuild --define "_sourcedir $$(pwd)" -bs $<
 
 
 
