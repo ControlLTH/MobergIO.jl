@@ -1,7 +1,7 @@
 LIBRARIES=libmoberg_comedi.so
 CCFLAGS+=-Wall -Werror -I../.. -I. -O3 -g -fPIC
 LDFLAGS+=-Lbuild/ -lmoberg
-LDFLAGS_comedi=-shared -fPIC -L../../build -lmoberg  
+LDFLAGS_comedi=-shared -fPIC -L../../build -lmoberg -lcomedi -lm  
 
 all:	$(LIBRARIES:%=build/%)
 

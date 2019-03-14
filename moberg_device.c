@@ -61,9 +61,9 @@ struct moberg_device *moberg_device_new(struct moberg *moberg,
   char *name = malloc(strlen("libmoberg_.so") + strlen(driver) + 1);
   if (!name) { goto out; }
   sprintf(name, "libmoberg_%s.so", driver);
-  void *handle = dlopen(name, RTLD_LAZY || RTLD_DEEPBIND);
+  void *handle = dlopen(name, RTLD_LAZY | RTLD_DEEPBIND);
   if (! handle) {
-    fprintf(stderr, "Could not find driver %s\n", name);
+    fprintf(stderr, "Could not find driver %s %s\n", name, dlerror());
     goto free_name;
   }
   struct moberg_device_driver *device_driver =
