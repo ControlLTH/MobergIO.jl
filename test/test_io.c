@@ -9,6 +9,7 @@ int main(int argc, char *argv[])
     goto out;
   }
   struct moberg_analog_in ai0;
+  struct moberg_analog_out ao0;
   double ai0_value;
   if (! moberg_OK(moberg_analog_in_open(moberg, 0, &ai0))) {
     fprintf(stderr, "OPEN failed\n");
@@ -19,6 +20,15 @@ int main(int argc, char *argv[])
     goto close;
   }
   fprintf(stderr, "READ ai0: %f\n", ai0_value);
+  if (! moberg_OK(moberg_analog_out_open(moberg, 0, &ao0))) {
+    fprintf(stderr, "OPEN failed\n");
+    goto free;
+  } 
+  if (! moberg_OK(ao0.write(ao0.context, ai0_value * 2))) { 
+    fprintf(stderr, "READ failed\n");
+    goto close;
+  }
+  fprintf(stderr, "WROTE ao0: %f\n", ai0_value * 2);
  close:
   moberg_analog_in_close(moberg, 0, ai0);
  free:
