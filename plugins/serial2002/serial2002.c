@@ -51,7 +51,7 @@ struct moberg_device_context {
   } port;
   struct remap_analog {
     int count;
-    struct {
+    struct map {
       unsigned char index;
       unsigned long maxdata;
       double min;
@@ -109,13 +109,17 @@ static struct moberg_status analog_in_read(
   struct moberg_channel_context *channel = &analog_in->channel_context;
   struct moberg_device_context *device = channel->device;
   struct serial2002_data data = { 0, 0 };
-  serial2002_poll_channel(device->port.fd,
-                          device->analog_in.map[channel->index].index);
-  struct moberg_status result = serial2002_read(device->port.fd, 1000, &data);
-  if (OK(result)) {
-    *value = (data.value * device->analog_in.map[channel->index].delta +
-              device->analog_in.map[channel->index].min);
+  struct map map = device->analog_in.map[channel->index];
+  struct moberg_status result = serial2002_poll_channel(
+    device->port.fd, map.index);
+  if (! OK(result)) {
+    goto return_result;
   }
+  result = serial2002_read(device->port.fd, 1000, &data);
+  if (OK(result)) {
+    *value = (data.value * map.delta + map.min);
+  }
+return_result:
   return result;
 err_einval:
   return MOBERG_ERRNO(EINVAL);
@@ -126,7 +130,18 @@ static struct moberg_status analog_out_write(
   double value)
 {
   fprintf(stderr, "%s\n", __FUNCTION__);
-  return MOBERG_OK;
+
+  struct moberg_channel_context *channel = &analog_out->channel_context;
+  struct moberg_device_context *device = channel->device;
+  struct map map = device->analog_out.map[channel->index];
+  long as_long = value - map.min / map.delta;
+  if (as_long < 0) {
+    value = 0;
+  } else if (as_long > map.maxdata) {
+    as_long = map.maxdata;
+  }
+  struct serial2002_data data = { is_channel, map.index, as_long };
+  return serial2002_write(device->port.fd,  data);
 }
 
 static struct moberg_status digital_in_read(
