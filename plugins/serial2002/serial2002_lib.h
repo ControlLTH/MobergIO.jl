@@ -53,12 +53,13 @@ struct moberg_status serial2002_poll_digital(int fd, int channel);
 
 struct moberg_status serial2002_poll_channel(int fd, int channel);
 
-struct moberg_status serial2002_read(int fd, int timeout,
+struct moberg_status serial2002_read(int fd, long timeout,
                                      struct serial2002_data *data);
 
 struct moberg_status serial2002_write(int fd, struct serial2002_data data);
 
 struct moberg_status serial2002_read_config(int fd,
+                                            long timeout,
                                             struct serial2002_config *config);
 
 #endif

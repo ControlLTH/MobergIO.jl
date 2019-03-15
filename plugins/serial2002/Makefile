@@ -17,5 +17,6 @@ build:
 
 build/serial2002.o: ../../moberg_module.h
 build/serial2002.o: serial2002_lib.h
+build/serial2002_lib.o: serial2002_lib.h
 build/libmoberg_serial2002.so: build/serial2002.o
 build/libmoberg_serial2002.so: build/serial2002_lib.o

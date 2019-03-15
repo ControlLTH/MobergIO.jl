@@ -47,6 +47,7 @@ struct moberg_device_context {
     int count;
     char *name;
     int baud;
+    long timeout;
     int fd;
   } port;
   struct remap_analog {
@@ -108,14 +109,14 @@ static struct moberg_status analog_in_read(
   
   struct moberg_channel_context *channel = &analog_in->channel_context;
   struct moberg_device_context *device = channel->device;
-  struct serial2002_data data = { 0, 0 };
+  struct serial2002_data data;
   struct analog_map map = device->analog_in.map[channel->index];
   struct moberg_status result = serial2002_poll_channel(
     device->port.fd, map.index);
   if (! OK(result)) {
     goto return_result;
   }
-  result = serial2002_read(device->port.fd, 1000, &data);
+  result = serial2002_read(device->port.fd, device->port.timeout, &data);
   if (OK(result)) {
     *value = (data.value * map.delta + map.min);
   }
@@ -157,7 +158,7 @@ static struct moberg_status digital_in_read(
   if (! OK(result)) {
     goto return_result;
   }
-  result = serial2002_read(device->port.fd, 1000, &data);
+  result = serial2002_read(device->port.fd, device->port.timeout, &data);
   if (OK(result)) {
     *value = data.value != 0;
   }
@@ -188,14 +189,14 @@ static struct moberg_status encoder_in_read(
   
   struct moberg_channel_context *channel = &encoder_in->channel_context;
   struct moberg_device_context *device = channel->device;
-  struct serial2002_data data = { 0, 0 };
+  struct serial2002_data data;
   struct digital_map map = device->encoder_in.map[channel->index];
   struct moberg_status result = serial2002_poll_channel(
     device->port.fd, map.index);
   if (! OK(result)) {
     goto return_result;
   }
-  result = serial2002_read(device->port.fd, 1000, &data);
+  result = serial2002_read(device->port.fd, device->port.timeout, &data);
   if (OK(result)) {
     *value = (data.value);
   }
@@ -307,7 +308,7 @@ static struct moberg_status device_open(struct moberg_device_context *device)
       ioctl(fd, TIOCSSERIAL, &settings);
     }
     struct serial2002_config config;
-    result = serial2002_read_config(fd, &config);
+    result = serial2002_read_config(fd, device->port.timeout, &config);
     if (! OK(result)) { goto err_result; }
     remap_analog(&device->analog_in, SERIAL2002_ANALOG_IN,
                   config.channel_in, 31);
@@ -426,6 +427,20 @@ static struct moberg_status parse_config(
       if (! acceptsym(c, tok_INTEGER, &baud)) { goto syntax_err; }
       if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
       device->port.baud = baud.u.integer.value;
+    } else if (acceptkeyword(c, "timeout")) {
+      token_t timeout;
+      int multiplier = 0;
+      if (! acceptsym(c, tok_EQUAL, NULL)) { goto syntax_err; }
+      if (! acceptsym(c, tok_INTEGER, &timeout)) { goto syntax_err; }
+      if (acceptkeyword(c, "s")) {
+        multiplier = 1000000;
+      } else if (acceptkeyword(c, "ms")) {
+        multiplier = 1000;
+      } else if (acceptkeyword(c, "us")) {
+        multiplier = 1;
+      } 
+      if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
+      device->port.timeout = timeout.u.integer.value * multiplier;
     } else {
       goto syntax_err;
     }
