@@ -73,10 +73,16 @@ cp moberg_inline.h ${RPM_BUILD_ROOT}%{_includedir}
 cp moberg_module.h ${RPM_BUILD_ROOT}%{_includedir}
 cp moberg_parser.h ${RPM_BUILD_ROOT}%{_includedir}
 
-mkdir -p ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg
+JAVA_ARCH=$(adaptors/java/src/getProperty_os_arch)
+mkdir -p ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg/jre/lib/${JAVA_ARCH}
+mkdir -p ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg/jre/lib/ext
 cp adaptors/java/README ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg
 cp -r adaptors/java/src ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg/src
-cp -r adaptors/java/build ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg/jre
+cp adaptors/java/build/libse_lth_control_realtime_moberg_Moberg.so \
+   ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg/jre/lib/${JAVA_ARCH}/
+cp adaptors/java/build/Moberg.jar \
+   ${RPM_BUILD_ROOT}/opt/java/se.lth.control.realtime.Moberg/jre/lib/ext/
+      
 
 mkdir -p ${RPM_BUILD_ROOT}/opt/matlab/src/moberg
 mkdir -p ${RPM_BUILD_ROOT}%{_includedir}
