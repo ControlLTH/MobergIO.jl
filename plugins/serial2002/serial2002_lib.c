@@ -33,7 +33,6 @@ static struct moberg_status tty_write(int fd, unsigned char *buf, int count)
   while (n < count) {
     int written = write(fd, &buf[n], count - n);
     if (written == 0) {
-      fprintf(stderr, "Failed to write\n");
       return MOBERG_ERRNO(ENODATA);
     } else if (written < 0) {
       return MOBERG_ERRNO(errno);
@@ -50,7 +49,7 @@ static struct moberg_status tty_read(int fd, long timeout, unsigned char *value)
   while (1) {
     pollfd.fd = fd;
     pollfd.events = POLLRDNORM | POLLRDBAND | POLLIN | POLLHUP | POLLERR;
-    int err = poll(&pollfd, 1, timeout);
+    int err = poll(&pollfd, 1, timeout / 1000);
     if (err >= 1) {
       break;
     } else if (err == 0) {
@@ -100,14 +99,11 @@ struct moberg_status serial2002_read(int f, long timeout,
     }
     
     length++;
-    if (data < 0) {
-      fprintf(stderr, "serial2002 error\n");
-      break;
-    } else if (length < 6 && data & 0x80) {
+    if (length < 6 && data & 0x80) {
       value->value = (value->value << 7) | (data & 0x7f);
     } else if (length == 6 && data & 0x80) {
-      fprintf(stderr, "Too long\n");
       value->kind = is_invalid;
+      return MOBERG_ERRNO(EFBIG);
       break;
     } else {
       if (length == 1) {
@@ -180,7 +176,6 @@ static double interpret_value(int value)
       result *= 1e-6;
       break;
   }
-  fprintf(stderr, "%f\n", result);
   return result;
 }
 

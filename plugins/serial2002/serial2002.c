@@ -133,12 +133,13 @@ static struct moberg_status analog_out_write(
   struct moberg_channel_context *channel = &analog_out->channel_context;
   struct moberg_device_context *device = channel->device;
   struct analog_map map = device->analog_out.map[channel->index];
-  long as_long = value - map.min / map.delta;
+  long as_long = (value - map.min) / map.delta;
   if (as_long < 0) {
-    value = 0;
+    as_long = 0;
   } else if (as_long > map.maxdata) {
     as_long = map.maxdata;
   }
+
   struct serial2002_data data = { is_channel, map.index, as_long };
   return serial2002_write(device->port.fd,  data);
 }
@@ -204,7 +205,6 @@ return_result:
   return result;
 err_einval:
   return MOBERG_ERRNO(EINVAL);
-  fprintf(stderr, "%s\n", __FUNCTION__);
   return MOBERG_OK;
 }
 
@@ -218,6 +218,7 @@ static struct moberg_device_context *new_context(struct moberg *moberg,
     result->moberg = moberg;
     result->dlclose = dlclose;
     result->dlhandle = dlhandle;
+    result->port.timeout = 100000;
   }
   return result;
 }
@@ -258,9 +259,10 @@ static void remap_analog(
         remap->map[remap->count].delta =
           (remap->map[remap->count].max - remap->map[remap->count].min) /
           remap->map[remap->count].maxdata;
-      }
+      } else {
+        remap->map[remap->count].delta = 1.0;
 
-      fprintf(stderr, "%d -> %d\n", remap->count, i);
+      }
       remap->count++;
     }
   }
@@ -276,7 +278,6 @@ static void remap_digital(
   for (int i = 0 ; i < count ; i++) {
     if (channel[i].kind == kind) {
       remap->map[remap->count].index = i;
-      fprintf(stderr, "%d -> %d\n", remap->count, i);
       remap->count++;
     }
   }
@@ -287,7 +288,6 @@ static struct moberg_status device_open(struct moberg_device_context *device)
   struct moberg_status result;
   int fd = -1;
 
-  fprintf(stderr, "%s\n", __FUNCTION__);
   if (device->port.count == 0) {
     fd = open(device->port.name, O_RDWR);
     if (fd < 0) { goto err_errno; }
@@ -323,10 +323,8 @@ static struct moberg_status device_open(struct moberg_device_context *device)
     device->port.fd = fd;
   }
   device->port.count++;
-  fprintf(stderr, "OPENED %d\n", device->port.count);
   return MOBERG_OK;
 err_errno:
-  fprintf(stderr, "ERRNO %d\n", errno);
   result = MOBERG_ERRNO(errno);
 err_result:
   if (fd >= 0) {
@@ -337,16 +335,13 @@ err_result:
 
 static struct moberg_status device_close(struct moberg_device_context *device)
 {
-  fprintf(stderr, "%s\n", __FUNCTION__);
   if (device->port.count < 0) { errno = ENODEV; goto err_errno; }
   device->port.count--;
   if (device->port.count == 0) {
-    fprintf(stderr, "CLOSE\n");
     if (close(device->port.fd) < 0) { goto err_errno; }
   }
   return MOBERG_OK;
 err_errno:
-  fprintf(stderr, "CLOSE %d\n", errno);
   return MOBERG_ERRNO(errno);
 
 }
@@ -371,14 +366,12 @@ static int channel_down(struct moberg_channel *channel)
 
 static struct moberg_status channel_open(struct moberg_channel *channel)
 {
-  fprintf(stderr, "%s\n", __FUNCTION__);
   struct moberg_status result = device_open(channel->context->device);
   return result;
 }
 
 static struct moberg_status channel_close(struct moberg_channel *channel)
 {
-  fprintf(stderr, "%s\n", __FUNCTION__);
   struct moberg_status result = device_close(channel->context->device);
   return result;
 }
