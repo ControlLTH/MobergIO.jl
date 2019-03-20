@@ -139,7 +139,7 @@ static struct channel *channel_get(struct list *list, int index)
 
 static int channel_set(struct list *list, int index, struct channel channel)
 {
-  if (list->capacity < index) {
+  if (list->capacity <= index) {
     int capacity = index + 1;
     void *new = realloc(list->channel, capacity * sizeof(*list->channel));
     if (new) {
