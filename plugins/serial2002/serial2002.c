@@ -367,6 +367,28 @@ static int channel_down(struct moberg_channel *channel)
 static struct moberg_status channel_open(struct moberg_channel *channel)
 {
   struct moberg_status result = device_open(channel->context->device);
+  int count = 0;
+  switch (channel->kind) {
+    case chan_ANALOGIN:
+      count = channel->context->device->analog_in.count;
+      break;
+    case chan_ANALOGOUT:
+      count = channel->context->device->analog_out.count;
+      break;
+    case chan_DIGITALIN:
+      count = channel->context->device->digital_in.count;
+      break;
+    case chan_DIGITALOUT:
+      count = channel->context->device->digital_out.count;
+      break;
+    case chan_ENCODERIN:
+      count = channel->context->device->encoder_in.count;
+      break;
+  }
+  if (channel->context->index >= count) {
+     device_close(channel->context->device);
+     result = MOBERG_ERRNO(ENODEV);
+  }
   return result;
 }
 
