@@ -1,8 +1,8 @@
 MOBERG_VERSION=$(shell git describe --tags)
 
-all: BUILD
+all: BUILD INSTALL
 
-.PHONY: BUILD
+.PHONY: BUILD 
 BUILD:
 	python2 ./setup.py build
 	python3 ./setup.py build

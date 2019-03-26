@@ -8,6 +8,7 @@ int main(int argc, char *argv[])
     goto out;
   }
   moberg4simulink_analog_in_close(0, ain);
+  return(0);
  out:
   return 1;
 }

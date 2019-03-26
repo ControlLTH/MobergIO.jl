@@ -141,7 +141,7 @@ static struct moberg_status encoder_in_read(
   
   struct moberg_channel_context *channel = &encoder_in->channel_context;
   struct moberg_device_context *device = channel->device;
-  *value = device->digital;
+  *value = device->digital * (channel->index + 1);
   return MOBERG_OK;
 err_einval:
   return MOBERG_ERRNO(EINVAL);
