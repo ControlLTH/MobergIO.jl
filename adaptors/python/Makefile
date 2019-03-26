@@ -1,0 +1,18 @@
+MOBERG_VERSION=$(shell git describe --tags)
+
+all: BUILD
+
+.PHONY: BUILD
+BUILD:
+	python2 ./setup.py build
+	python3 ./setup.py build
+
+.PHONY: INSTALL
+INSTALL:
+	MOBERG_VERSION=$(MOBERG_VERSION) python2 \
+		./setup.py install -O1 --prefix=/usr/ --root=./install
+	MOBERG_VERSION=$(MOBERG_VERSION) python3 \
+		./setup.py install -O1 --prefix=/usr/ --root=./install
+
+clean:
+	rm -rf build install
