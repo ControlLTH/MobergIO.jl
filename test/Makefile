@@ -1,7 +1,7 @@
 TEST = test_start_stop test_io test_moberg4simulink
 CCFLAGS += -Wall -Werror -I$(shell pwd) -g
 LDFLAGS += -L$(shell pwd)/build/ -lmoberg
-ENV_TEST = LD_LIBRARY_PATH=../build HOME=.
+ENV_TEST = LD_LIBRARY_PATH=../build XDG_CONFIG_HOME=.config XDG_CONFIG_DIRS=.
 LDFLAGS_test_moberg4simulink = -lmoberg4simulink
 CCFLAGS_test_moberg4simulink = -I../adaptors/matlab -Wall -Werror -I$(shell pwd) -g
 
