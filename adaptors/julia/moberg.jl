@@ -14,7 +14,7 @@ mutable struct moberg
     handle::Ptr{Nothing}
 end
 
-function moberg() 
+function moberg()
     handle = ccall((:moberg_new, "libmoberg"), Ptr{Nothing}, ())
     println(handle)
     m = moberg(handle)
@@ -31,46 +31,46 @@ mutable struct moberg_analog_in
     context::Ptr{Nothing}
     do_read::Ptr{Nothing}
     handle::moberg
-    moberg_analog_in(m::moberg, index::Unsigned) = (
-        self = new();
+    function moberg_analog_in(m::moberg, index::Unsigned)
+        self = new()
         check_OK(ccall((:moberg_analog_in_open, "libmoberg"),
                        moberg_status,
                        (Ptr{Nothing}, Cint, Ref{moberg_analog_in}),
-                       m.handle, index, self));
-        self.handle = m;
+                       m.handle, index, self))
+        self.handle = m
         function close(channel::moberg_analog_in)
             println(channel)
             ccall((:moberg_analog_in_close, "libmoberg"),
                   moberg_status,
                   (Ptr{Nothing}, Cint, moberg_analog_in),
                   channel.handle.handle, index, self)
-        end;
-        finalizer(close, self);
+        end
+        finalizer(close, self)
         self
-    )
+    end
 end
 
 mutable struct moberg_analog_out
     context::Ptr{Nothing}
     do_write::Ptr{Nothing}
     handle::moberg
-    moberg_analog_out(m::moberg, index::Unsigned) = (
-        self = new();
+    function moberg_analog_out(m::moberg, index::Unsigned)
+        self = new()
         check_OK(ccall((:moberg_analog_out_open, "libmoberg"),
                        moberg_status,
                        (Ptr{Nothing}, Cint, Ref{moberg_analog_out}),
-                       m.handle, index, self));
-        self.handle = m;
+                       m.handle, index, self))
+        self.handle = m
         function close(channel::moberg_analog_out)
             println(channel)
             ccall((:moberg_analog_out_close, "libmoberg"),
                   moberg_status,
                   (Ptr{Nothing}, Cint, moberg_analog_out),
                   channel.handle.handle, index, self)
-        end;
-        finalizer(close, self);
+        end
+        finalizer(close, self)
         self
-    )
+    end
 end
 
 function read(ain::moberg_analog_in)
@@ -92,12 +92,12 @@ end
 function test()
     m = moberg()
     println(m)
-    
-    for v in -10.0:2.0:10 
+
+    for v in -10.0:2.0:10
         for i in 30:31
             try
                 aout = moberg_analog_out(m, Unsigned(i))
-                value = v + i - 32;
+                value = v + i - 32
                 write(aout, value)
                 print("$value ")
             catch
@@ -123,4 +123,5 @@ test()
 
 println("DONE")
 GC.gc()
+GC.gc() # See https://github.com/JuliaCI/BenchmarkTools.jl/blob/af35d0513fe1e336ad0d8b9a35f924e8461aefa2/src/execution.jl#L1
 println("Really DONE")

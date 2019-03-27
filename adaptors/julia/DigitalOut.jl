@@ -7,16 +7,16 @@ mutable struct DigitalOut
     moberg::Moberg
     index::UInt32
     channel::DigitalOutChannel
-    DigitalOut(moberg::Moberg, index::Unsigned) = (
-        channel = DigitalOutChannel(0,0);
+    function DigitalOut(moberg::Moberg, index::Unsigned)
+        channel = DigitalOutChannel(0,0)
         checkOK(ccall((:moberg_digital_out_open, "libmoberg"),
                        Status,
                        (Moberg, Cint, Ref{DigitalOutChannel}),
-                       moberg, index, channel));
-        self = new(moberg, index, channel);
-        finalizer(close, self);
+                       moberg, index, channel))
+        self = new(moberg, index, channel)
+        finalizer(close, self)
         self
-    )
+    end
 end
 
 function close(dout::DigitalOut)
@@ -25,7 +25,7 @@ function close(dout::DigitalOut)
                   Status,
                   (Moberg, Cint, DigitalOutChannel),
                   dout.moberg, dout.index, dout.channel))
-end;
+end
 
 function write(dout::DigitalOut, value::Bool)
     checkOK(ccall(dout.channel.write,

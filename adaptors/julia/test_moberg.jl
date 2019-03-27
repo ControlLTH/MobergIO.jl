@@ -8,12 +8,12 @@ import MobergIO: read, write
 function test()
     m = MobergIO.Moberg()
     println(m)
-    
-    for v in -10.0:2.0:10 
+
+    for v in -10.0:2.0:10
         for i in 30:31
             try
                 aout = MobergIO.AnalogOut(m, Unsigned(i))
-                value = v + i - 32;
+                value = v + i - 32
                 write(aout, value)
                 print("$value ")
             catch ex
