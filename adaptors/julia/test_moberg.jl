@@ -63,4 +63,5 @@ test()
 
 println("DONE")
 GC.gc()
+GC.gc() # See https://github.com/JuliaCI/BenchmarkTools.jl/blob/af35d0513fe1e336ad0d8b9a35f924e8461aefa2/src/execution.jl#L1
 println("Really DONE")
