@@ -137,7 +137,7 @@ cp adaptors/matlab/Makefile.mex ${RPM_BUILD_ROOT}/opt/matlab/src/moberg/Makefile
 
 # Julia
 mkdir -p ${RPM_BUILD_ROOT}/opt/julia/packages/MobergIO/src
-cp adaptors/julia/* ${RPM_BUILD_ROOT}/opt/julia/packages/MobergIO/src
+cp adaptors/julia/*.jl ${RPM_BUILD_ROOT}/opt/julia/packages/MobergIO/src
 
 
 %files
