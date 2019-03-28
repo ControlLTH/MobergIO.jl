@@ -173,7 +173,7 @@ cp adaptors/julia/*.jl ${RPM_BUILD_ROOT}/opt/julia/packages/MobergIO/src
 %files python2 -f adaptors/python/INSTALLED_python2
 %defattr(-,root,root,-)
 
-%files -n python%{python3_pkgversion}-%{name} -f adaptors/python/INSTALLED_python3
+%files python%{python3_pkgversion} -f adaptors/python/INSTALLED_python3
 %defattr(-,root,root,-)
 
 %files julia
