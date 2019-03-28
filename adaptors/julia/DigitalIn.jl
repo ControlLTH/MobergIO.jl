@@ -7,16 +7,16 @@ mutable struct DigitalIn
     moberg::Moberg
     index::UInt32
     channel::DigitalInChannel
-    DigitalIn(moberg::Moberg, index::Unsigned) = (
-        channel = DigitalInChannel(0,0);
+    function DigitalIn(moberg::Moberg, index::Unsigned)
+        channel = DigitalInChannel(0,0)
         checkOK(ccall((:moberg_digital_in_open, "libmoberg"),
                        Status,
                        (Moberg, Cint, Ref{DigitalInChannel}),
                        moberg, index, channel));
-        self = new(moberg, index, channel);
-        finalizer(close, self);
+        self = new(moberg, index, channel)
+        finalizer(close, self)
         self
-    )
+    end
 end
 
 function close(din::DigitalIn)
@@ -35,4 +35,3 @@ function read(din::DigitalIn)
                   din.channel.context, result))
     return result[] != 0
 end
-

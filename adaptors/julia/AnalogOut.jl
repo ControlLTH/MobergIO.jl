@@ -7,16 +7,16 @@ mutable struct AnalogOut
     moberg::Moberg
     index::UInt32
     channel::AnalogOutChannel
-    AnalogOut(moberg::Moberg, index::Unsigned) = (
-        channel = AnalogOutChannel(0,0);
+    function AnalogOut(moberg::Moberg, index::Unsigned)
+        channel = AnalogOutChannel(0,0)
         checkOK(ccall((:moberg_analog_out_open, "libmoberg"),
                        Status,
                        (Moberg, Cint, Ref{AnalogOutChannel}),
                        moberg, index, channel));
-        self = new(moberg, index, channel);
-        finalizer(close, self);
+        self = new(moberg, index, channel)
+        finalizer(close, self)
         self
-    )
+    end
 end
 
 function close(aout::AnalogOut)
@@ -25,7 +25,7 @@ function close(aout::AnalogOut)
                   Status,
                   (Moberg, Cint, AnalogOutChannel),
                   aout.moberg, aout.index, aout.channel))
-end;
+end
 
 function write(aout::AnalogOut, value::Cdouble)
     checkOK(ccall(aout.channel.write,
