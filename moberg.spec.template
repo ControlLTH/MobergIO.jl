@@ -53,25 +53,25 @@ Requires: %{name}-devel = %{version}-%{release}
 %description matlab
 Matlab support files for %{name}
 
-%package -n python2-%{name}
+%package python2
 Summary: Python2 support files for %{name}
 Requires: %{name} = %{version}-%{release}
 
-%description -n python2-%{name}
+%description python2
 Python2 support files for %{name}
 
-%package -n python%{python3_pkgversion}-%{name}
+%package python%{python3_pkgversion}
 Summary: Python3 support files for %{name}
 Requires: %{name} = %{version}-%{release}
 
-%description -n python%{python3_pkgversion}-%{name}
+%description python%{python3_pkgversion}
 Python3 support files for %{name}
 
-%package -n MobergIO.jl
+%package julia
 Summary: Julia support files for %{name}
 Requires: %{name} = %{version}-%{release}
 
-%description -n MobergIO.jl
+%description julia
 Julia support files for %{name}
 
 
@@ -170,12 +170,12 @@ cp adaptors/julia/*.jl ${RPM_BUILD_ROOT}/opt/julia/packages/MobergIO/src
 /opt/matlab/src/moberg/*
 %{_includedir}/moberg4simulink.h
 
-%files -n python2-%{name} -f adaptors/python/INSTALLED_python2
+%files python2 -f adaptors/python/INSTALLED_python2
 %defattr(-,root,root,-)
 
 %files -n python%{python3_pkgversion}-%{name} -f adaptors/python/INSTALLED_python3
 %defattr(-,root,root,-)
 
-%files -n MobergIO.jl
+%files julia
 %defattr(-,root,root,-)
 /opt/julia/packages/MobergIO
