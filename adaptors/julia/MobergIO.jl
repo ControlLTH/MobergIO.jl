@@ -1,5 +1,6 @@
 module MobergIO
 
+const DEBUG = false
 
 struct Status
     result::Clong
@@ -23,6 +24,7 @@ function Moberg()
 end
 
 function close(h::Moberg)
+    DEBUG && println("Destroy $(h)")
     ccall((:moberg_free, "libmoberg"), Nothing, (Moberg,), h)
 end
 

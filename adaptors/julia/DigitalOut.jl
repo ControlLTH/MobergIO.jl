@@ -20,7 +20,7 @@ mutable struct DigitalOut
 end
 
 function close(dout::DigitalOut)
-    # println("closing $(dout)")
+    DEBUG && println("closing $(dout)")
     checkOK(ccall((:moberg_digital_out_close, "libmoberg"),
                   Status,
                   (Moberg, Cint, DigitalOutChannel),

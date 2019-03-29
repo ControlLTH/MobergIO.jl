@@ -20,7 +20,7 @@ mutable struct EncoderIn
 end
 
 function close(ein::EncoderIn)
-    # println("closing $(ein)")
+    DEBUG && println("closing $(ein)")
     checkOK(ccall((:moberg_encoder_in_close, "libmoberg"),
                   Status,
                   (Moberg, Cint, EncoderInChannel),

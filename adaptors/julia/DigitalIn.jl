@@ -20,7 +20,7 @@ mutable struct DigitalIn
 end
 
 function close(din::DigitalIn)
-    # println("closing $(din)")
+    DEBUG && println("closing $(din)")
     checkOK(ccall((:moberg_digital_in_close, "libmoberg"),
                   Status,
                   (Moberg, Cint, DigitalInChannel),

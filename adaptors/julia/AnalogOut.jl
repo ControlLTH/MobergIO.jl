@@ -20,7 +20,7 @@ mutable struct AnalogOut
 end
 
 function close(aout::AnalogOut)
-    # println("closing $(aout)")
+    DEBUG && println("closing $(aout)")
     checkOK(ccall((:moberg_analog_out_close, "libmoberg"),
                   Status,
                   (Moberg, Cint, AnalogOutChannel),

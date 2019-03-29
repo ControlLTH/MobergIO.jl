@@ -20,7 +20,7 @@ mutable struct AnalogIn
 end
 
 function close(ain::AnalogIn)
-    # println("closing $(ain)")
+    DEBUG && println("closing $(ain)")
     checkOK(ccall((:moberg_analog_in_close, "libmoberg"),
                   Status,
                   (Moberg, Cint, AnalogInChannel),
