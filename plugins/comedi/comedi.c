@@ -357,7 +357,7 @@ static struct moberg_status channel_open(struct moberg_channel *channel)
     insn.n = sizeof(data) / sizeof(data[0]);
     data[0] = INSN_CONFIG_SET_ROUTING;
     data[1] = channel->context->descriptor.route;
-    if (comedi_do_insn(channel->context->device->comedi.handle, &insn)) {
+    if (0 > comedi_do_insn(channel->context->device->comedi.handle, &insn)) {
       goto err_errno;
     }
   }
