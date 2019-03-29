@@ -64,11 +64,13 @@ test: all
 clean:
 	rm -f build/*.so
 	rm -f build/*.mex*
+	rm -f build/lib/*.o
 	rm -f *~
 	rm -f moberg-*.spec
 	rm -f moberg-*.tar.gz
 	make -C test clean
 	for d in $(ADAPTORS) ; do make -C $$d clean ; done
+	for d in $(PLUGINS) ; do make -C $$d clean ; done
 
 build/libmoberg.so: build/lib/moberg.o
 build/libmoberg.so: build/lib/moberg_config.o
@@ -79,3 +81,9 @@ build/lib/%.o: moberg_inline.h
 build/lib/moberg.o: moberg_config.h
 build/lib/moberg.o: moberg_module.h
 build/lib/moberg.o: moberg_parser.h
+build/lib/moberg_device.o: moberg.h
+build/lib/moberg_device.o: moberg_channel.h
+build/lib/moberg_device.o: moberg_config.h
+build/lib/moberg_device.o: moberg_device.h
+build/lib/moberg_device.o: moberg_inline.h
+

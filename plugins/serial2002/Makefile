@@ -15,6 +15,9 @@ build/%.o:      %.c Makefile | build
 build:
 	mkdir -p $@
 
+clean:
+	rm -f build/*
+
 build/serial2002.o: ../../moberg_module.h
 build/serial2002.o: serial2002_lib.h
 build/serial2002_lib.o: serial2002_lib.h

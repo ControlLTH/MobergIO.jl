@@ -15,6 +15,9 @@ build/%.o:      %.c Makefile | build
 build:
 	mkdir -p $@
 
+clean:
+	rm -f build/*
+
 build/comedi.c: ../../moberg.h
 build/comedi.o: ../../moberg_config.h
 build/comedi.o: ../../moberg_device.h

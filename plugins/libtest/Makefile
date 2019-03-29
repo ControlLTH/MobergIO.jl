@@ -15,4 +15,7 @@ build/%.o:      %.c Makefile | build
 build:
 	mkdir -p $@
 
+clean:
+	rm -f build/*
+
 build/libtest.o: ../../moberg_module.h
