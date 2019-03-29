@@ -26,6 +26,7 @@ end
 function close(h::Moberg)
     DEBUG && println("Destroy $(h)")
     ccall((:moberg_free, "libmoberg"), Nothing, (Moberg,), h)
+    h.handle = Ptr{Nothing}(0)
 end
 
 include("AnalogIn.jl")

@@ -4,16 +4,17 @@ mutable struct DigitalInChannel
 end
 
 mutable struct DigitalIn
-    moberg::Moberg
+    moberg::Ptr{Nothing}
     index::UInt32
     channel::DigitalInChannel
     function DigitalIn(moberg::Moberg, index::Unsigned)
         channel = DigitalInChannel(0,0)
+        moberg_handle = moberg.handle
         checkOK(ccall((:moberg_digital_in_open, "libmoberg"),
                        Status,
-                       (Moberg, Cint, Ref{DigitalInChannel}),
-                       moberg, index, channel));
-        self = new(moberg, index, channel)
+                       (Ptr{Nothing}, Cint, Ref{DigitalInChannel}),
+                       moberg_handle, index, channel));
+        self = new(moberg_handle, index, channel)
         finalizer(close, self)
         self
     end
@@ -23,7 +24,7 @@ function close(din::DigitalIn)
     DEBUG && println("closing $(din)")
     checkOK(ccall((:moberg_digital_in_close, "libmoberg"),
                   Status,
-                  (Moberg, Cint, DigitalInChannel),
+                  (Ptr{Nothing}, Cint, DigitalInChannel),
                   din.moberg, din.index, din.channel))
 end
 

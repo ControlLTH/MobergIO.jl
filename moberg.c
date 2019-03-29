@@ -38,6 +38,8 @@
 #include <moberg_parser.h>
 
 struct moberg {
+  int should_free;
+  int open_channels;
   struct moberg_config *config;
   struct channel_list {
     int capacity;
@@ -255,19 +257,8 @@ struct moberg *moberg_new()
     fprintf(stderr, "Failed to allocate moberg struct\n");
     goto err;
   }
-  result->analog_in.capacity = 0;
-  result->analog_in.value = NULL;
-  result->analog_out.capacity = 0;
-  result->analog_out.value = NULL;
-  result->digital_in.capacity = 0;
-  result->digital_in.value = NULL;
-  result->digital_out.capacity = 0;
-  result->digital_out.value = NULL;
-  result->encoder_in.capacity = 0;
-  result->encoder_in.value = NULL;
-  result->deferred_action = NULL;
-  result->config = NULL;
-    
+  memset(result, 0, sizeof(*result));
+
   /* Parse default configuration(s) */
   const char * const *config_paths = xdgSearchableConfigDirectories(NULL);
   const char * const *path;
@@ -295,9 +286,9 @@ err:
   return result;
 }
 
-void moberg_free(struct moberg *moberg)
+static void free_if_unused(struct moberg *moberg)
 {
-  if (moberg) {
+  if (moberg->should_free && moberg->open_channels == 0) {
     moberg_config_free(moberg->config);
     channel_list_free(&moberg->analog_in);
     channel_list_free(&moberg->analog_out);
@@ -308,6 +299,15 @@ void moberg_free(struct moberg *moberg)
     free(moberg);
   }
 }
+
+void moberg_free(struct moberg *moberg)
+{
+  if (moberg) {
+    moberg->should_free = 1;
+    free_if_unused(moberg);
+  }
+}
+
 
 /* Input/output */
 
@@ -328,6 +328,7 @@ struct moberg_status moberg_analog_in_open(
   if (! OK(result)) {
     return result;
   }
+  moberg->open_channels++;
   *analog_in = channel->action.analog_in;
   return MOBERG_OK;
 }
@@ -346,6 +347,8 @@ struct moberg_status moberg_analog_in_close(
     return MOBERG_ERRNO(EINVAL);
   }
   struct moberg_status result = channel->close(channel);
+  moberg->open_channels--;
+  free_if_unused(moberg);
   if (! OK(result)) {
     return result;
   }
@@ -369,6 +372,7 @@ struct moberg_status moberg_analog_out_open(
   if (! OK(result)) {
     return result;
   }
+  moberg->open_channels++;
   *analog_out = channel->action.analog_out;
   return MOBERG_OK;
 }
@@ -387,6 +391,8 @@ struct moberg_status moberg_analog_out_close(
     return MOBERG_ERRNO(EINVAL);
   }
   struct moberg_status result = channel->close(channel);
+  moberg->open_channels--;
+  free_if_unused(moberg);
   if (! OK(result)) {
     return result;
   }
@@ -410,6 +416,7 @@ struct moberg_status moberg_digital_in_open(
   if (! OK(result)) {
     return result;
   }
+  moberg->open_channels++;
   *digital_in = channel->action.digital_in;
   return MOBERG_OK;
 }
@@ -428,6 +435,8 @@ struct moberg_status moberg_digital_in_close(
     return MOBERG_ERRNO(EINVAL);
   }
   struct moberg_status result = channel->close(channel);
+  moberg->open_channels--;
+  free_if_unused(moberg);
   if (! OK(result)) {
     return result;
   }
@@ -451,6 +460,7 @@ struct moberg_status moberg_digital_out_open(
   if (! OK(result)) {
     return result;
   }
+  moberg->open_channels++;
   *digital_out = channel->action.digital_out;
   return MOBERG_OK;
 }
@@ -469,6 +479,8 @@ struct moberg_status moberg_digital_out_close(
     return MOBERG_ERRNO(EINVAL);
   }
   struct moberg_status result = channel->close(channel);
+  moberg->open_channels--;
+  free_if_unused(moberg);
   if (! OK(result)) {
     return result;
   }
@@ -492,6 +504,7 @@ struct moberg_status moberg_encoder_in_open(
   if (! OK(result)) {
     return result;
   }
+  moberg->open_channels++;
   *encoder_in = channel->action.encoder_in;
   return MOBERG_OK;
 }
@@ -510,6 +523,8 @@ struct moberg_status moberg_encoder_in_close(
     return MOBERG_ERRNO(EINVAL);
   }
   struct moberg_status result = channel->close(channel);
+  moberg->open_channels--;
+  free_if_unused(moberg);
   if (! OK(result)) {
     return result;
   }

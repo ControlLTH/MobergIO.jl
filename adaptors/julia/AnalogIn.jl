@@ -4,16 +4,17 @@ mutable struct AnalogInChannel
 end
 
 mutable struct AnalogIn
-    moberg::Moberg
+    moberg::Ptr{Nothing}
     index::UInt32
     channel::AnalogInChannel
     function AnalogIn(moberg::Moberg, index::Unsigned)
         channel = AnalogInChannel(0,0)
+        moberg_handle = moberg.handle
         checkOK(ccall((:moberg_analog_in_open, "libmoberg"),
                        Status,
-                       (Moberg, Cint, Ref{AnalogInChannel}),
-                       moberg, index, channel))
-        self = new(moberg, index, channel)
+                       (Ptr{Nothing}, Cint, Ref{AnalogInChannel}),
+                       moberg_handle, index, channel))
+        self = new(moberg_handle, index, channel)
         finalizer(close, self)
         self
     end
@@ -23,7 +24,7 @@ function close(ain::AnalogIn)
     DEBUG && println("closing $(ain)")
     checkOK(ccall((:moberg_analog_in_close, "libmoberg"),
                   Status,
-                  (Moberg, Cint, AnalogInChannel),
+                  (Ptr{Nothing}, Cint, AnalogInChannel),
                   ain.moberg, ain.index, ain.channel))
 end
 
