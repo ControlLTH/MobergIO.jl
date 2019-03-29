@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
   } 
   if (! moberg_OK(ai0.read(ai0.context, &ai0_value))) { 
     fprintf(stderr, "READ failed\n");
-    goto close;
+    goto close_ai0;
   }
   fprintf(stderr, "READ ai0: %f\n", ai0_value);
   if (! moberg_OK(moberg_analog_out_open(moberg, 0, &ao0))) {
@@ -26,13 +26,15 @@ int main(int argc, char *argv[])
   } 
   if (! moberg_OK(ao0.write(ao0.context, ai0_value * 2))) { 
     fprintf(stderr, "READ failed\n");
-    goto close;
+    goto close_ao0;
   }
   fprintf(stderr, "WROTE ao0: %f\n", ai0_value * 2);
- close:
+close_ao0:
+  moberg_analog_out_close(moberg, 0, ao0);
+close_ai0:
   moberg_analog_in_close(moberg, 0, ai0);
- free:
+free:
   moberg_free(moberg);
- out:
+out:
   return 0;
 }
