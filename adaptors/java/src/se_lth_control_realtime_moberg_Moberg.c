@@ -261,16 +261,19 @@ Java_se_lth_control_realtime_moberg_Moberg_analogOutClose(
 }
 
 
-JNIEXPORT void JNICALL 
+JNIEXPORT double JNICALL 
 Java_se_lth_control_realtime_moberg_Moberg_analogOut(
-  JNIEnv *env, jobject obj, jint index, jdouble value
+  JNIEnv *env, jobject obj, jint index, jdouble desired
 ) 
 {
   struct channel *channel = channel_get(&analog_out, index);
   if (! channel) {
     throwMobergNotOpenException(env, index);
+    return 0.0;
   } else {
-    channel->analog_out.write(channel->analog_out.context, value);
+    double actual;
+    channel->analog_out.write(channel->analog_out.context, desired, &actual);
+    return actual;
   }
 }
 
@@ -354,16 +357,19 @@ Java_se_lth_control_realtime_moberg_Moberg_digitalOutClose(
   }
 }
 
-JNIEXPORT void JNICALL 
+JNIEXPORT jboolean JNICALL 
 Java_se_lth_control_realtime_moberg_Moberg_digitalOut(
-  JNIEnv *env, jobject obj, jint index, jboolean value
+  JNIEnv *env, jobject obj, jint index, jboolean desired
 ) 
 {
   struct channel *channel = channel_get(&digital_out, index);
   if (! channel) {
     throwMobergNotOpenException(env, index);
+    return 0;
   } else {
-    channel->digital_out.write(channel->digital_out.context, value);
+    int actual;
+    channel->digital_out.write(channel->digital_out.context, desired, &actual);
+    return actual;
   }
 }
 

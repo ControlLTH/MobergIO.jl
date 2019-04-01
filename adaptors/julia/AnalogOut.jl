@@ -29,8 +29,10 @@ function close(aout::AnalogOut)
 end
 
 function write(aout::AnalogOut, value::Cdouble)
+    result = Ref{Cdouble}(0.0)
     checkOK(ccall(aout.channel.write,
                   Status,
-                  (Ptr{Nothing}, Cdouble),
-                  aout.channel.context, value))
+                  (Ptr{Nothing}, Cdouble, Ptr{Cdouble}),
+                  aout.channel.context, value, result))
+    return result[];
 end

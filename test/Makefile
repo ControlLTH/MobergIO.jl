@@ -14,12 +14,13 @@ PYTHON3PATH=$(shell realpath ../adaptors/python/install/usr/lib*/python3*/site-p
 all:
 
 .PHONY: test
-test: $(PYTEST:%=run_py_%) $(JULIATEST:%=run_jl_%) $(CTEST:%=run_c_%) 
+test: $(CTEST:%=run_c_%) $(PYTEST:%=run_py_%) $(JULIATEST:%=run_jl_%) 
 	echo Tests run
 
 .PHONY: run_c_%
 run_c_%:build/%
 	$(ENV_TEST) valgrind --leak-check=full ./build/$*
+	env -i  LD_LIBRARY_PATH=../build valgrind --leak-check=full ./build/$*
 
 .PHONY: run_py_%
 run_py_%: %.py

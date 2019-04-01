@@ -96,11 +96,15 @@ err_einval:
 
 static struct moberg_status analog_out_write(
   struct moberg_channel_analog_out *analog_out,
-  double value)
+  double desired_value,
+  double *actual_value)
 {
   struct moberg_channel_context *channel = &analog_out->channel_context;
   struct moberg_device_context *device = channel->device;
-  device->analog = value * (channel->index + 1);
+  device->analog = desired_value * (channel->index + 1);
+  if (actual_value) {
+    *actual_value = desired_value;
+  }
   return MOBERG_OK;
 }
 
@@ -120,15 +124,19 @@ err_einval:
 
 static struct moberg_status digital_out_write(
   struct moberg_channel_digital_out *digital_out,
-  int value)
+  int desired_value,
+  int *actual_value)
 {
   struct moberg_channel_context *channel = &digital_out->channel_context;
   struct moberg_device_context *device = channel->device;
   int mask =  (1<<channel->index);
-  if (value) {
+  if (desired_value) {
     device->digital |= mask;
   } else {
     device->digital &= ~mask;
+  }
+  if (actual_value) {
+    *actual_value = desired_value;
   }
   return MOBERG_OK;
 }

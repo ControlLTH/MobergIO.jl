@@ -29,8 +29,10 @@ function close(dout::DigitalOut)
 end
 
 function write(dout::DigitalOut, value::Bool)
+    result = Ref{Cint}(0)
     checkOK(ccall(dout.channel.write,
                   Status,
-                  (Ptr{Nothing}, Cint),
-                  dout.channel.context, value ? 1 : 0))
+                  (Ptr{Nothing}, Cint, Ptr{Cint}),
+                  dout.channel.context, value ? 1 : 0, result))
+    return result[] != 0
 end

@@ -53,7 +53,8 @@ struct moberg_analog_in {
 struct moberg_analog_out {
   struct moberg_channel_analog_out *context;
   struct moberg_status (*write)(struct moberg_channel_analog_out *,
-                                double value);
+                                double desired_value,
+                                double *actual_value);
 };
 
 struct moberg_digital_in {
@@ -65,7 +66,8 @@ struct moberg_digital_in {
 struct moberg_digital_out {
   struct moberg_channel_digital_out *context;
   struct moberg_status (*write)(struct moberg_channel_digital_out *,
-                                int value);
+                                int desired_value,
+                                int *actual_value);
 };
 
 struct moberg_encoder_in {

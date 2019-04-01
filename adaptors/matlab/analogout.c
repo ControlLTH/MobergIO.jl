@@ -136,7 +136,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 
     for (i = 0 ; i < ssGetNumPWork(S) ; i++) {
       struct moberg_analog_out *aout = (struct moberg_analog_out*)pwork[i];
-      if (! moberg_OK(aout->write(aout->context, *up[i]))) {
+      if (! moberg_OK(aout->write(aout->context, *up[i], NULL))) {
         static char error[256];
         double *channel = mxGetPr(ssGetSFcnParam(S,1));
         sprintf(error, "Failed to write analogout #%d", (int)channel[i]);

@@ -112,16 +112,17 @@ err_errno:
 
 static struct moberg_status analog_out_write(
   struct moberg_channel_analog_out *analog_out,
-  double value)
+  double desired_value,
+  double *actual_value)
 {
   struct channel_descriptor descriptor = analog_out->channel_context.descriptor;
   lsampl_t data;
-  if (value < descriptor.min) {
+  if (desired_value < descriptor.min) {
     data = 0;
-  } else if (value > descriptor.max) {
+  } else if (desired_value > descriptor.max) {
     data = descriptor.maxdata;
   } else {
-    data = (value - descriptor.min) / descriptor.delta;
+    data = (desired_value - descriptor.min) / descriptor.delta;
   }
   if (data < 0) {
     data = 0;
@@ -134,6 +135,10 @@ static struct moberg_status analog_out_write(
                             0, 0, data)) {
     goto err_errno;
   }
+  if (actual_value) {
+    *actual_value = data * descriptor.delta + descriptor.min;
+  }
+    
   return MOBERG_OK;
 err_errno:
   return MOBERG_ERRNO(comedi_errno());
@@ -162,15 +167,19 @@ err_errno:
 
 static struct moberg_status digital_out_write(
   struct moberg_channel_digital_out *digital_out,
-  int value)
+  int desired_value,
+  int *actual_value)
 {
   struct channel_descriptor descriptor = digital_out->channel_context.descriptor;
-  lsampl_t data = value==0?0:1;
+  lsampl_t data = desired_value==0?0:1;
   if (0 > comedi_data_write(digital_out->channel_context.device->comedi.handle,
                             descriptor.subdevice,
                             descriptor.subchannel,
                             0, 0, data)) {
     goto err_errno;
+  }
+  if (actual_value) {
+    *actual_value = data;
   }
   return MOBERG_OK;
 err_errno:

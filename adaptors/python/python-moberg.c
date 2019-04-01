@@ -276,7 +276,7 @@ MobergAnalogIn_read(MobergAnalogInObject *self, PyObject *Py_UNUSED(ignored))
     PyErr_Format(PyExc_OSError, "moberg._AnalogIn(%d).read() failed with %d",
                  self->index, status.result);
   }
-  return Py_BuildValue("f", value);
+  return Py_BuildValue("d", value);
 }
 
 static PyMethodDef MobergAnalogIn_methods[] = {
@@ -373,19 +373,20 @@ MobergAnalogOut_init(MobergAnalogOutObject *self, PyObject *args, PyObject *kwds
 static PyObject *
 MobergAnalogOut_write(MobergAnalogOutObject *self, PyObject *args)
 {
-  double value = 1.23;
-  if (! PyArg_ParseTuple(args, "d", &value)) {
+  double desired_value, actual_value;
+  if (! PyArg_ParseTuple(args, "d", &desired_value)) {
     goto err;
   }
   struct moberg_status status = self->channel.write(self->channel.context,
-                                                    value);
+                                                    desired_value,
+                                                    &actual_value);
   if (!moberg_OK(status)) {
     PyErr_Format(PyExc_OSError, "moberg._AnalogOut(%d).write() failed with %d",
                  self->index, status.result);
     goto err;
   }
-  Py_INCREF(Py_None);
-  return Py_None;
+  
+  return Py_BuildValue("d", actual_value);
 err:
   return NULL;
 }
@@ -588,19 +589,20 @@ MobergDigitalOut_init(MobergDigitalOutObject *self, PyObject *args, PyObject *kw
 static PyObject *
 MobergDigitalOut_write(MobergDigitalOutObject *self, PyObject *args)
 {
-  double value = 1.23;
-  if (! PyArg_ParseTuple(args, "d", &value)) {
+  PyObject *desired;
+  int actual;
+  if (! PyArg_ParseTuple(args, "O", &desired)) {
     goto err;
   }
   struct moberg_status status = self->channel.write(self->channel.context,
-                                                    value);
+                                                    PyObject_IsTrue(desired),
+                                                    &actual);
   if (!moberg_OK(status)) {
     PyErr_Format(PyExc_OSError, "moberg._DigitalOut(%d).write() failed with %d",
                  self->index, status.result);
     goto err;
   }
-  Py_INCREF(Py_None);
-  return Py_None;
+  return Py_BuildValue("O", actual ? Py_True: Py_False);
 err:
   return NULL;
 }

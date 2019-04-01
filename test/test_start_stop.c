@@ -3,11 +3,13 @@
 
 int main(int argc, char *argv[])
 {
+  fprintf(stderr, "NEW\n");
   struct moberg *moberg = moberg_new(NULL);
-  printf("START:\n");
+  fprintf(stderr, "START:\n");
   moberg_start(moberg, stdout);
-  printf("STOP:\n");
+  fprintf(stderr, "STOP:\n");
   moberg_stop(moberg, stdout);
-  printf("DONE\n");
+  fprintf(stderr, "FREE\n");
   moberg_free(moberg);
+  fprintf(stderr, "DONE\n");
 }

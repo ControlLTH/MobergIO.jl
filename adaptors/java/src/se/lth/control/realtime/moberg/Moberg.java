@@ -28,7 +28,7 @@ public class Moberg {
 
   public static native void analogOutOpen(int index) throws MobergException;
   public static native void analogOutClose(int index) throws MobergException;
-  public static native void analogOut(int index, double value) throws MobergException;
+  public static native double analogOut(int index, double value) throws MobergException;
 
   public static native void digitalInOpen(int index) throws MobergException;
   public static native void digitalInClose(int index) throws MobergException;
@@ -36,7 +36,7 @@ public class Moberg {
 
   public static native void digitalOutOpen(int index) throws MobergException;
   public static native void digitalOutClose(int index) throws MobergException;
-  public static native void digitalOut(int index, boolean value) throws MobergException;
+  public static native boolean digitalOut(int index, boolean value) throws MobergException;
 
   public static native void encoderInOpen(int index) throws MobergException;
   public static native void encoderInClose(int index) throws MobergException;

@@ -136,7 +136,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 
     for (i = 0 ; i < ssGetNumPWork(S) ; i++) {
       struct moberg_digital_out *dout = (struct moberg_digital_out*)pwork[i];
-      if (! moberg_OK(dout->write(dout->context, *up[i]))) {
+      if (! moberg_OK(dout->write(dout->context, *up[i], NULL))) {
         static char error[256];
         double *channel = mxGetPr(ssGetSFcnParam(S,1));
         sprintf(error, "Failed to write digitalout #%d", (int)channel[i]);

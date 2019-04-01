@@ -128,12 +128,13 @@ err_einval:
 
 static struct moberg_status analog_out_write(
   struct moberg_channel_analog_out *analog_out,
-  double value)
+  double desired_value,
+  double *actual_value)
 {
   struct moberg_channel_context *channel = &analog_out->channel_context;
   struct moberg_device_context *device = channel->device;
   struct analog_map map = device->analog_out.map[channel->index];
-  long as_long = (value - map.min) / map.delta;
+  long as_long = (desired_value - map.min) / map.delta;
   if (as_long < 0) {
     as_long = 0;
   } else if (as_long > map.maxdata) {
@@ -141,7 +142,11 @@ static struct moberg_status analog_out_write(
   }
 
   struct serial2002_data data = { is_channel, map.index, as_long };
-  return serial2002_write(device->port.fd,  data);
+  struct moberg_status result = serial2002_write(device->port.fd,  data);
+  if (OK(result) && actual_value) {
+    *actual_value = data.value * map.delta + map.min;    
+  }
+  return result;
 }
 
 static struct moberg_status digital_in_read(
@@ -173,13 +178,18 @@ err_einval:
 
 static struct moberg_status digital_out_write(
   struct moberg_channel_digital_out *digital_out,
-  int value)
+  int desired_value,
+  int *actual_value)
 {
   struct moberg_channel_context *channel = &digital_out->channel_context;
   struct moberg_device_context *device = channel->device;
   struct digital_map map = device->digital_out.map[channel->index];
-  struct serial2002_data data = { is_digital, map.index, value != 0 };
-  return serial2002_write(device->port.fd,  data);
+  struct serial2002_data data = { is_digital, map.index, desired_value != 0 };
+  struct moberg_status result = serial2002_write(device->port.fd,  data);
+  if (OK(result) && actual_value) {
+    *actual_value = data.value;
+  }
+  return result;
 }
 
 static struct moberg_status encoder_in_read(
