@@ -260,7 +260,6 @@ struct moberg *moberg_new()
   memset(result, 0, sizeof(*result));
 
   /* Parse default configuration(s) */
-  setenv("HOME", "/", 0);
   const char * const *config_paths = xdgSearchableConfigDirectories(NULL);
   const char * const *path;
   for (path = config_paths ; *path ; path++) {
