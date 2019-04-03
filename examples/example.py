@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import moberg
+import math
 
 def scan():
     result = [[], [], [], [], []]
@@ -23,6 +24,8 @@ def main():
     for c in channels:
         print(len(c))
         pass
+    for c in channels[1]:
+        print(c[0], c[1].write(math.inf), c[1].write(-math.inf), c[1].write(0))
     pass
     
 if __name__ == '__main__':
