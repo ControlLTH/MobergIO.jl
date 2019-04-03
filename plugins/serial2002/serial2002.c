@@ -134,7 +134,14 @@ static struct moberg_status analog_out_write(
   struct moberg_channel_context *channel = &analog_out->channel_context;
   struct moberg_device_context *device = channel->device;
   struct analog_map map = device->analog_out.map[channel->index];
-  long as_long = (desired_value - map.min) / map.delta;
+  long as_long;
+  if (desired_value < map.min) {
+    as_long = 0;
+  } else if (desired_value > map.max) {
+    as_long = map.maxdata;
+  } else {
+    as_long = (desired_value - map.min) / map.delta;
+  }
   if (as_long < 0) {
     as_long = 0;
   } else if (as_long > map.maxdata) {
