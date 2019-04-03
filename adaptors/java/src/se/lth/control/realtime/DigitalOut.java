@@ -36,8 +36,13 @@ public class DigitalOut extends IOChannel {
     Moberg.digitalOutClose(index);
   }
 
+  @Deprecated
   public void set(boolean value) throws IOChannelException {
     Moberg.digitalOut(index, value);
+  }
+
+  public boolean write(boolean value) throws IOChannelException {
+    return Moberg.digitalOut(index, value);
   }
 
 }

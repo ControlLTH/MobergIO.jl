@@ -35,7 +35,12 @@ public class AnalogIn extends IOChannel {
     Moberg.analogInClose(index);
   }
 
+  @Deprecated
   public double get() throws IOChannelException {
+    return Moberg.analogIn(index);
+  }
+
+  public double read() throws IOChannelException {
     return Moberg.analogIn(index);
   }
 

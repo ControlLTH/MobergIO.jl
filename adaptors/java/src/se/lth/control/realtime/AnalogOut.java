@@ -39,8 +39,13 @@ public class AnalogOut extends IOChannel {
     Moberg.analogOutClose(index);
   }
 
+  @Deprecated
   public void set(double value) throws IOChannelException {
     Moberg.analogOut(index, value);
+  }
+
+  public double write(double value) throws IOChannelException {
+    return Moberg.analogOut(index, value);
   }
 
 }

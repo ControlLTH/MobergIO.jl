@@ -36,9 +36,14 @@ public class EncoderIn extends IOChannel {
   protected void close() throws IOChannelException {
     Moberg.encoderInClose(index);
   }
-  
+
+  @Deprecated
   public long get() throws IOChannelException {
     return Moberg.encoderIn(index);
   }
     
+  public long read() throws IOChannelException {
+    return Moberg.encoderIn(index);
+  }
+
 }

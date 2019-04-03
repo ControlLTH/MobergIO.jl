@@ -37,7 +37,12 @@ public class DigitalIn extends IOChannel {
     Moberg.digitalInClose(index);
   }
 
+  @Deprecated
   public boolean get() throws IOChannelException {
+    return Moberg.digitalIn(index);
+  }
+
+  public boolean read() throws IOChannelException {
     return Moberg.digitalIn(index);
   }
 
