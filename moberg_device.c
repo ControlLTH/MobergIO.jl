@@ -151,16 +151,22 @@ static struct moberg_status map(
   struct moberg_channel *channel)
 {
   struct moberg_status result = MOBERG_ERRNO(EINVAL);
- 
+
   if (device->range->kind != channel->kind) {
+    fprintf(stderr, "Mapping wrong kind of channel %d != %d\n",
+            device->range->kind, channel->kind);
     return MOBERG_ERRNO(EINVAL);
   }
   if (device->range->min > device->range->max) {
+    fprintf(stderr, "Mapping outside range %d > %d\n",
+            device->range->min, device->range->max);
     return MOBERG_ERRNO(ENOSPC);
   }
   result = add_channel(device, device->range->kind, device->range->min,
                        (union channel) { .channel=channel });
   if (! OK(result)) {
+    fprintf(stderr, "Failed to add channel kind=%d, index=%d\n",
+            device->range->kind, device->range->min);
     return result;
   }
   device->range->min++;
