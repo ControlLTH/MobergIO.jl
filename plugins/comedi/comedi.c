@@ -344,14 +344,14 @@ static struct moberg_status channel_open(struct moberg_channel *channel)
     if (0 > comedi_dio_config(channel->context->device->comedi.handle,
                               channel->context->descriptor.subdevice,
                               channel->context->descriptor.subchannel,
-                              0)) {
+                              0) && errno != ENOENT) {
       goto err_errno;
     }
   } else if (channel->kind == chan_DIGITALOUT) {
     if (0 > comedi_dio_config(channel->context->device->comedi.handle,
                               channel->context->descriptor.subdevice,
                               channel->context->descriptor.subchannel,
-                              1)) {
+                              1) && errno != ENOENT) {
       goto err_errno;
     }
   }
