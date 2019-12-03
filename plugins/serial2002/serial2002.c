@@ -321,6 +321,7 @@ static struct moberg_status device_open(struct moberg_device_context *device)
     if (ioctl(fd, TCSETS2, &termios2) < 0) { goto err_errno; }
     struct serial_struct settings; 
     if (ioctl(fd, TIOCGSERIAL, &settings) >= 0) {
+      settings.flags |= ASYNC_LOW_LATENCY;
       /* It's expected for this to fail for at least some USB serial adapters */
       ioctl(fd, TIOCSSERIAL, &settings);
     }
