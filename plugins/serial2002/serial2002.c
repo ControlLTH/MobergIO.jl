@@ -118,6 +118,10 @@ static struct moberg_status analog_in_read(
   }
   result = serial2002_read(device->port.fd, device->port.timeout, &data);
   if (OK(result)) {
+    if ((data.kind != is_channel) || (data.index != map.index)) {
+      result = MOBERG_ERRNO(ECHRNG);
+      goto return_result;
+    }
     *value = (data.value * map.delta + map.min);
   }
 return_result:
@@ -173,6 +177,10 @@ static struct moberg_status digital_in_read(
   }
   result = serial2002_read(device->port.fd, device->port.timeout, &data);
   if (OK(result)) {
+    if ((data.kind != is_digital) || (data.index != map.index)) {
+      result = MOBERG_ERRNO(ECHRNG);
+      goto return_result;
+    }
     *value = data.value != 0;
   }
 return_result:
@@ -216,6 +224,10 @@ static struct moberg_status encoder_in_read(
   }
   result = serial2002_read(device->port.fd, device->port.timeout, &data);
   if (OK(result)) {
+    if ((data.kind != is_channel) || (data.index != map.index)) {
+      result = MOBERG_ERRNO(ECHRNG);
+      goto return_result;
+    }
     *value = (data.value);
   }
 return_result:
