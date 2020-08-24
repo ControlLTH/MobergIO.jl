@@ -17,6 +17,7 @@ BuildRequires:  java-devel
 BuildRequires:  python2-devel
 BuildRequires:  python3-devel
 BuildRequires:  julia
+BuildRequires:  git
 
 
 %description
@@ -70,6 +71,7 @@ Python3 support files for %{name}
 %package julia
 Summary: Julia support files for %{name}
 Requires: %{name} = %{version}-%{release}
+Requires: julia
 
 %description julia
 Julia support files for %{name}
@@ -136,8 +138,37 @@ cp adaptors/matlab/Makefile.mex ${RPM_BUILD_ROOT}/opt/matlab/src/moberg/Makefile
 )
 
 # Julia
-mkdir -p ${RPM_BUILD_ROOT}/opt/julia/packages/MobergIO/src
-cp adaptors/julia/*.jl ${RPM_BUILD_ROOT}/opt/julia/packages/MobergIO/src
+mkdir -p ${RPM_BUILD_ROOT}/opt/julia/local/MobergIO/src
+cp adaptors/julia/*.jl ${RPM_BUILD_ROOT}/opt/julia/local/MobergIO/src
+cat adaptors/julia/Project.toml.template \
+| sed -e 's/<<<VERSION>>>/%{version}/' \
+> ${RPM_BUILD_ROOT}/opt/julia/local/MobergIO/Project.toml
+(
+  cd ${RPM_BUILD_ROOT}/opt/julia/local/MobergIO
+  git init
+  git add Project.toml src/*.jl
+  git commit -m 'Local version of moberg __MOBERG_VERSION__'
+  git tag __MOBERG_VERSION__
+)
+
+%post julia
+set -x
+export JULIA_LOAD_PATH=/opt/julia:
+export JULIA_DEPOT_PATH=/opt/julia:
+cat<<EOF|julia
+import Pkg
+Pkg.add(path="/opt/julia/local/MobergIO/")
+Pkg.precompile()
+EOF
+
+%postun julia
+set -x
+export JULIA_LOAD_PATH=/opt/julia:
+export JULIA_DEPOT_PATH=/opt/julia:
+cat<<EOF|julia
+import Pkg
+Pkg.rm("MobergIO")
+EOF
 
 
 %files
@@ -178,4 +209,4 @@ cp adaptors/julia/*.jl ${RPM_BUILD_ROOT}/opt/julia/packages/MobergIO/src
 
 %files julia
 %defattr(-,root,root,-)
-/opt/julia/packages/MobergIO
+/opt/julia/local/MobergIO
