@@ -147,6 +147,8 @@ cat adaptors/julia/Project.toml.template \
   cd ${RPM_BUILD_ROOT}/opt/julia/local/MobergIO
   git init
   git add Project.toml src/*.jl
+  git config user.email "mockbuild@$(hostname)"
+  git config user.name "Mockbuild"
   git commit -m 'Local version of moberg __MOBERG_VERSION__'
   git tag __MOBERG_VERSION__
 )
