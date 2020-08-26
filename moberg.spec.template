@@ -155,6 +155,7 @@ cat adaptors/julia/Project.toml.template \
 
 %post julia
 set -x
+export JULIA_PROJECT=$(mktemp -d julia.XXXXXX)
 export JULIA_LOAD_PATH=/opt/julia:
 export JULIA_DEPOT_PATH=/opt/julia:
 cat<<EOF|julia
@@ -162,16 +163,12 @@ import Pkg
 Pkg.add(path="/opt/julia/local/MobergIO/")
 Pkg.precompile()
 EOF
+rm ${JULIA_PROJECT}/Manifest.toml
+rm ${JULIA_PROJECT}/Project.toml
+rmdir ${JULIA_PROJECT}
 
 %postun julia
-set -x
-export JULIA_LOAD_PATH=/opt/julia:
-export JULIA_DEPOT_PATH=/opt/julia:
-cat<<EOF|julia
-import Pkg
-Pkg.rm("MobergIO")
-EOF
-
+# Cleanup of precomiled, etc needed...?
 
 %files
 %defattr(-,root,root,-)
