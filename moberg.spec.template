@@ -138,13 +138,13 @@ cp adaptors/matlab/Makefile.mex ${RPM_BUILD_ROOT}/opt/matlab/src/moberg/Makefile
 )
 
 # Julia
-mkdir -p ${RPM_BUILD_ROOT}/opt/julia/local/MobergIO/src
-cp adaptors/julia/*.jl ${RPM_BUILD_ROOT}/opt/julia/local/MobergIO/src
+mkdir -p ${RPM_BUILD_ROOT}/opt/julia/packages/MobergIO/src
+cp adaptors/julia/*.jl ${RPM_BUILD_ROOT}/opt/julia/packages/MobergIO/src
 cat adaptors/julia/Project.toml.template \
 | sed -e 's/<<<VERSION>>>/%{version}/' \
-> ${RPM_BUILD_ROOT}/opt/julia/local/MobergIO/Project.toml
+> ${RPM_BUILD_ROOT}/opt/julia/packages/MobergIO/Project.toml
 (
-  cd ${RPM_BUILD_ROOT}/opt/julia/local/MobergIO
+  cd ${RPM_BUILD_ROOT}/opt/julia/packages/MobergIO
   git init
   git add Project.toml src/*.jl
   git config user.email "mockbuild@$(hostname)"
@@ -160,7 +160,7 @@ export JULIA_LOAD_PATH=/opt/julia:
 export JULIA_DEPOT_PATH=/opt/julia:
 cat<<EOF|julia
 import Pkg
-Pkg.add(path="/opt/julia/local/MobergIO/")
+Pkg.add(path="/opt/julia/packages/MobergIO/")
 Pkg.precompile()
 EOF
 rm ${JULIA_PROJECT}/Manifest.toml
@@ -208,4 +208,4 @@ rmdir ${JULIA_PROJECT}
 
 %files julia
 %defattr(-,root,root,-)
-/opt/julia/local/MobergIO
+/opt/julia/packages/MobergIO
