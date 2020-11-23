@@ -13,7 +13,7 @@ BuildRequires:  gcc
 BuildRequires:  comedilib-devel
 BuildRequires:  valgrind
 BuildRequires:  libxdg-basedir-devel
-BuildRequires:  java-devel
+BuildRequires:  java-1.8.0-devel
 BuildRequires:  python2-devel
 BuildRequires:  python3-devel
 BuildRequires:  julia
