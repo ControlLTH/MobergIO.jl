@@ -281,7 +281,7 @@ static void remap_analog(
   for (int i = 0 ; i < count ; i++) {
     if (channel[i].kind == kind) {
       remap->map[remap->count].index = i;
-      remap->map[remap->count].maxdata = (1 << channel[i].bits) - 1;
+      remap->map[remap->count].maxdata = (1ULL << channel[i].bits) - 1;
       remap->map[remap->count].min = channel[i].min;
       remap->map[remap->count].max = channel[i].max;
       if (remap->map[remap->count].maxdata) {

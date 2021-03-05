@@ -1,5 +1,5 @@
 LIBRARIES=libmoberg.so
-MOBERG_VERSION=$(shell git describe --tags | sed -e 's/^v//;s/-/_/g' )
+MOBERG_VERSION=$(shell git describe --tags | sed -e 's/^v//;s/-/./g' )
 CCFLAGS+=-Wall -Werror -I$(shell pwd) -O3 -g
 LDFLAGS+=-L$(shell pwd)/build/ -lmoberg
 PLUGINS:=$(wildcard plugins/*)
