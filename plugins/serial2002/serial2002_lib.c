@@ -204,6 +204,23 @@ static struct moberg_status update_channel(struct serial2002_channel *channel,
   return MOBERG_OK;
 }
 
+static void discard_pending(int fd)
+{
+  struct pollfd pollfd;
+
+  while (1) {
+    pollfd.fd = fd;
+    pollfd.events = POLLRDNORM | POLLRDBAND | POLLIN | POLLHUP | POLLERR;
+    int err = poll(&pollfd, 1, 0);
+    if (err <= 0) {
+      break;
+    } else {
+      char discard;
+      read(fd, &discard, 1);
+    }
+  }
+}
+
 static struct moberg_status do_read_config(
   int fd,
   long timeout,
@@ -211,6 +228,7 @@ static struct moberg_status do_read_config(
 {
   struct serial2002_data data = { 0, 0 };
 
+  discard_pending(fd);
   memset(config, 0, sizeof(*config));
   serial2002_poll_channel(fd, 31);
   while (1) {
