@@ -91,7 +91,7 @@ struct moberg_status serial2002_read(int f, long timeout,
   value->index = 0;
   value->value = 0;
   length = 0;
-  while (1) {
+  while (value->kind == is_invalid) {
     unsigned char data;
     struct moberg_status result = tty_read(f, timeout, &data);
     if (! OK(result)) {
@@ -106,6 +106,7 @@ struct moberg_status serial2002_read(int f, long timeout,
       return MOBERG_ERRNO(EFBIG);
       break;
     } else {
+      value->index = data & 0x1f;
       if (length == 1) {
         switch ((data >> 5) & 0x03) {
           case 0:{
@@ -116,13 +117,25 @@ struct moberg_status serial2002_read(int f, long timeout,
             value->value = 1;
             value->kind = is_digital;
           } break;
+          case 2:{
+            if (data == 0x5f) {
+              /* Ignore FTDI USB/serial event character (get bit 31) */
+              value->kind = is_invalid;
+              value->index = 0;
+              value->value = 0;
+              length = 0;
+            } else {
+              return MOBERG_ERRNO(EINVAL);
+            }
+          } break;
+          case 3:{
+            return MOBERG_ERRNO(EINVAL);
+          } break;
         }
       } else {
         value->value = (value->value << 2) | ((data & 0x60) >> 5);
         value->kind = is_channel;
       }
-      value->index = data & 0x1f;
-      break;
     }
   }
   return MOBERG_OK;
