@@ -24,14 +24,15 @@
 #include <poll.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <moberg_inline.h>
 #include <serial2002_lib.h>
 
-static struct moberg_status tty_write(int fd, unsigned char *buf, int count)
+struct moberg_status serial2002_flush(struct serial2002_io *io)
 {
   int n = 0;
-  while (n < count) {
-    int written = write(fd, &buf[n], count - n);
+  while (n < io->write.pos) {
+    int written = write(io->fd, &io->write.data[n], io->write.pos - n);
     if (written == 0) {
       return MOBERG_ERRNO(ENODATA);
     } else if (written < 0) {
@@ -39,50 +40,105 @@ static struct moberg_status tty_write(int fd, unsigned char *buf, int count)
     }
     n += written;
   }
+  io->write.pos = 0;
   return MOBERG_OK;
 }
 
-static struct moberg_status tty_read(int fd, long timeout, unsigned char *value)
+static struct moberg_status tty_write(struct serial2002_io *io,
+                                      unsigned char *buf,
+                                      int count,
+                                      int flush)
 {
-  struct pollfd pollfd;
+  struct moberg_status result = MOBERG_OK;
 
-  while (1) {
-    pollfd.fd = fd;
-    pollfd.events = POLLRDNORM | POLLRDBAND | POLLIN | POLLHUP | POLLERR;
-    int err = poll(&pollfd, 1, timeout / 1000);
-    if (err >= 1) {
-      break;
-    } else if (err == 0) {
-      return MOBERG_ERRNO(ETIMEDOUT);
-    } else if (err < 0) {
-      return MOBERG_ERRNO(errno);
+  for (int i = 0 ; i < count ; i++) {
+    io->write.data[io->write.pos] = buf[i];
+    io->write.pos++;
+    if (io->write.pos >= sizeof(io->write.data)) {
+      result = serial2002_flush(io);
+      if (! OK(result)) {
+        goto return_result;
+      }
     }
   }
-  int err = read(fd, value, 1);
-  if (err == 1) {
-    return MOBERG_OK;
-  } else {
-    return MOBERG_ERRNO(errno);
+  if (flush) {
+    result = serial2002_flush(io);
+    if (! OK(result)) {
+      goto return_result;
+    }
   }
+return_result:
+  return result;
 }
 
-struct moberg_status serial2002_poll_digital(int fd, int channel)
+static struct moberg_status tty_read(struct serial2002_io *io,
+                                     long timeout,
+                                     unsigned char *value)
+{
+  struct moberg_status result = MOBERG_OK;
+
+  if (io->read.pos >= io->read.count) {
+    struct pollfd pollfd;
+    pollfd.fd = io->fd;
+    pollfd.events = POLLRDNORM | POLLRDBAND | POLLIN | POLLHUP | POLLERR;
+    int err = poll(&pollfd, 1, timeout / 1000);
+    if (err == 0) {
+      result = MOBERG_ERRNO(ETIMEDOUT);
+      goto return_result;
+
+    } else if (err < 0) {
+      result = MOBERG_ERRNO(errno);
+      goto return_result;
+    }
+    int available;
+    err = ioctl(io->fd, FIONREAD, &available);
+    if (err < 0) {
+      result = MOBERG_ERRNO(errno);
+      goto return_result;
+    }
+    if (available > sizeof(io->read.data)) {
+      available = sizeof(io->read.data);
+    }
+    err = read(io->fd, &io->read.data[0], available);
+    if (err > 0) {
+      io->read.pos = 0;
+      io->read.count = err;
+    } else if (err == 0) {
+      result = MOBERG_ERRNO(ENODATA);
+      goto return_result;
+    } else if (err < 0) {
+      result = MOBERG_ERRNO(errno);
+      goto return_result;
+    }
+  }
+return_result:
+  *value = io->read.data[io->read.pos];
+  io->read.pos++;
+  return result;
+}
+
+struct moberg_status serial2002_poll_digital(struct serial2002_io *io,
+                                             int channel,
+                                             int flush)
 {
   unsigned char cmd;
   
   cmd = 0x40 | (channel & 0x1f);
-  return tty_write(fd, &cmd, 1);
+  return tty_write(io, &cmd, 1, flush);
 }
 
-struct moberg_status serial2002_poll_channel(int fd, int channel)
+struct moberg_status serial2002_poll_channel(struct serial2002_io *io,
+                                             int channel,
+                                             int flush)
 {
   unsigned char cmd;
   
   cmd = 0x60 | (channel & 0x1f);
-  return tty_write(fd, &cmd, 1);
+  return tty_write(io, &cmd, 1, flush);
 }
 
-struct moberg_status serial2002_read(int f, long timeout,
+struct moberg_status serial2002_read(struct serial2002_io *io,
+                                     long timeout,
                                      struct serial2002_data *value)
 {
   int length;
@@ -93,7 +149,7 @@ struct moberg_status serial2002_read(int f, long timeout,
   length = 0;
   while (value->kind == is_invalid) {
     unsigned char data;
-    struct moberg_status result = tty_read(f, timeout, &data);
+    struct moberg_status result = tty_read(io, timeout, &data);
     if (! OK(result)) {
       return result;
     }
@@ -141,11 +197,13 @@ struct moberg_status serial2002_read(int f, long timeout,
   return MOBERG_OK;
 }
 
-struct moberg_status serial2002_write(int f, struct serial2002_data data)
+struct moberg_status serial2002_write(struct serial2002_io *io,
+                                      struct serial2002_data data,
+                                      int flush)
 {
   if (data.kind == is_digital) {
     unsigned char ch = ((data.value << 5) & 0x20) | (data.index & 0x1f);
-    return tty_write(f, &ch, 1);
+    return tty_write(io, &ch, 1, 1);
   } else {
     unsigned char ch[6];
     int i = 0;
@@ -169,7 +227,7 @@ struct moberg_status serial2002_write(int f, struct serial2002_data data)
     i++;
     ch[i] = ((data.value << 5) & 0x60) | (data.index & 0x1f);
     i++;
-    return tty_write(f, ch, i);
+    return tty_write(io, ch, i, 1);
   }
 }
 
@@ -217,35 +275,35 @@ static struct moberg_status update_channel(struct serial2002_channel *channel,
   return MOBERG_OK;
 }
 
-static void discard_pending(int fd)
+static void discard_pending(struct serial2002_io *io)
 {
   struct pollfd pollfd;
 
   while (1) {
-    pollfd.fd = fd;
+    pollfd.fd = io->fd;
     pollfd.events = POLLRDNORM | POLLRDBAND | POLLIN | POLLHUP | POLLERR;
     int err = poll(&pollfd, 1, 0);
     if (err <= 0) {
       break;
     } else {
       char discard;
-      read(fd, &discard, 1);
+      read(io->fd, &discard, 1);
     }
   }
 }
 
 static struct moberg_status do_read_config(
-  int fd,
+  struct serial2002_io *io,
   long timeout,
   struct serial2002_config *config)
 {
   struct serial2002_data data = { 0, 0 };
 
-  discard_pending(fd);
+  discard_pending(io);
   memset(config, 0, sizeof(*config));
-  serial2002_poll_channel(fd, 31);
+  serial2002_poll_channel(io, 31, 1);
   while (1) {
-    struct moberg_status result = serial2002_read(fd, timeout, &data);
+    struct moberg_status result = serial2002_read(io, timeout, &data);
     if (! OK(result)) { return result; }
     unsigned int channel = (data.value & 0x0001f);
     unsigned int kind = (data.value & 0x00e0) >> 5;
@@ -311,11 +369,11 @@ static struct moberg_status check_config(struct serial2002_config *c)
 }
 
 struct moberg_status serial2002_read_config(
-  int fd,
+  struct serial2002_io *io,
   long timeout,
   struct serial2002_config *config)
 { 
-  struct moberg_status result = do_read_config(fd, timeout, config);
+  struct moberg_status result = do_read_config(io, timeout, config);
   if (OK(result)) {
     result = check_config(config);
   }

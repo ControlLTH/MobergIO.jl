@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <errno.h>
 #include <moberg.h>
 #include <moberg_config.h>
@@ -48,7 +49,7 @@ struct moberg_device_context {
     char *name;
     int baud;
     long timeout;
-    int fd;
+    struct serial2002_io io;
   } port;
   struct remap_analog {
     int count;
@@ -65,8 +66,13 @@ struct moberg_device_context {
     struct digital_map {
       unsigned char index;
     } map[32];
-  } digital_in, digital_out,
-    encoder_in;
+  } digital_in, digital_out, encoder_in;
+  struct batch {
+    int active;
+    struct timespec expires;
+    struct serial2002_data digital[32];
+    struct serial2002_data channel[32];
+  } batch;
 };
 
 struct moberg_channel_context {
@@ -101,6 +107,125 @@ struct moberg_channel_encoder_in {
   struct moberg_channel_context channel_context;
 };
 
+static struct timespec timespec_sub(struct timespec t1, struct timespec t2)
+{
+  struct timespec result;
+  result.tv_sec = t1.tv_sec - t2.tv_sec;
+  result.tv_nsec = t1.tv_nsec - t2.tv_nsec;
+  if (result.tv_nsec < 0) {
+    result.tv_sec--;
+    result.tv_nsec += 1000000000L;
+  }
+  return result;
+}
+
+static struct timespec timespec_add(struct timespec t1, struct timespec t2)
+{
+  struct timespec result;
+  result.tv_sec = t1.tv_sec + t2.tv_sec;
+  result.tv_nsec = t1.tv_nsec + t2.tv_nsec;
+  if (result.tv_nsec > 1000000000L) {
+    result.tv_sec++;
+    result.tv_nsec -= 1000000000L;
+  }
+  return result;
+}
+
+static struct moberg_status batch_sampling(
+  struct moberg_device_context *device,
+  struct analog_map *analog,
+  struct digital_map *digital,
+  struct digital_map *encoder,
+  struct serial2002_data *data)
+{
+  struct moberg_status result = MOBERG_OK;
+  if (! data) {
+    result = MOBERG_ERRNO(EINVAL);
+    goto return_result;
+  }
+  struct timespec start, diff;
+  if (clock_gettime(CLOCK_REALTIME, &start) < 0) {
+    result = MOBERG_ERRNO(errno);
+    goto return_result;
+  }
+  diff = timespec_sub(device->batch.expires, start);
+  if (diff.tv_sec < 0 ||
+      (digital && device->batch.digital[digital->index].kind != is_digital) ||
+      (analog && device->batch.channel[analog->index].kind != is_channel) ||
+      (encoder && device->batch.channel[encoder->index].kind != is_channel)) {
+    /* Batch has expired */
+    int expected = 0;
+    for (int i = 0 ; i < device->digital_in.count ; i++) {
+      struct digital_map *map = &device->digital_in.map[i];
+      device->batch.digital[map->index].kind = is_invalid;
+      expected++;
+      result = serial2002_poll_digital(&device->port.io, map->index, 0);
+      if (! OK(result)) {
+        goto return_result;
+      }
+    }
+    for (int i = 0 ; i < device->analog_in.count ; i++) {
+      struct analog_map *map = &device->analog_in.map[i];
+      device->batch.channel[map->index].kind = is_invalid;
+      expected++;
+      result = serial2002_poll_channel(&device->port.io, map->index, 0);
+      if (! OK(result)) {
+        goto return_result;
+      }
+    }
+    for (int i = 0 ; i < device->encoder_in.count ; i++) {
+      struct digital_map *map = &device->encoder_in.map[i];
+      device->batch.channel[map->index].kind = is_invalid;
+      expected++;
+      result = serial2002_poll_channel(&device->port.io, map->index, 0);
+      if (! OK(result)) {
+        goto return_result;
+      }
+    }
+    serial2002_flush(&device->port.io);
+    while (expected > 0) {
+      struct serial2002_data data;
+      result = serial2002_read(&device->port.io, device->port.timeout, &data);
+      if (! OK(result)) {
+        goto return_result;
+      }
+      if (data.kind == is_digital) {
+        device->batch.digital[data.index] = data;
+        expected--;
+      } else if (data.kind == is_channel) {
+        device->batch.channel[data.index] = data;
+        expected--;
+      } else {
+        result = MOBERG_ERRNO(EINVAL);
+        goto return_result;
+      }
+    }
+    struct timespec now;
+    if (clock_gettime(CLOCK_REALTIME, &now) < 0) {
+      result = MOBERG_ERRNO(errno);
+      goto return_result;
+    }
+    diff = timespec_sub(now, start);
+    device->batch.expires = timespec_add(now, diff);
+  }
+  if (digital &&
+      device->batch.digital[digital->index].kind == is_digital) {
+    *data = device->batch.digital[digital->index];
+    device->batch.digital[digital->index].kind = is_invalid;
+  } else if (analog &&
+             device->batch.channel[analog->index].kind == is_channel) {
+    *data = device->batch.channel[analog->index];
+    device->batch.channel[analog->index].kind = is_invalid;
+  } else if (encoder &&
+             device->batch.channel[encoder->index].kind == is_channel) {
+    *data = device->batch.channel[encoder->index];
+    device->batch.channel[encoder->index].kind = is_invalid;
+  }
+
+return_result:
+  return result;
+}
+
 static struct moberg_status analog_in_read(
   struct moberg_channel_analog_in *analog_in,
   double *value)
@@ -111,19 +236,22 @@ static struct moberg_status analog_in_read(
   struct moberg_device_context *device = channel->device;
   struct serial2002_data data;
   struct analog_map map = device->analog_in.map[channel->index];
-  struct moberg_status result = serial2002_poll_channel(
-    device->port.fd, map.index);
-  if (! OK(result)) {
-    goto return_result;
-  }
-  result = serial2002_read(device->port.fd, device->port.timeout, &data);
-  if (OK(result)) {
+  struct moberg_status result;
+
+  if (device->batch.active) {
+    result = batch_sampling(device, &map,  NULL, NULL, &data);
+    if (! OK(result)) { goto return_result; }
+  } else {
+    result = serial2002_poll_channel(&device->port.io, map.index, 0);
+    if (! OK(result)) { goto return_result; }
+    result = serial2002_read(&device->port.io, device->port.timeout, &data);
+    if (! OK(result)) { goto return_result; }
     if ((data.kind != is_channel) || (data.index != map.index)) {
       result = MOBERG_ERRNO(ECHRNG);
       goto return_result;
     }
-    *value = (data.value * map.delta + map.min);
   }
+  *value = (data.value * map.delta + map.min);
 return_result:
   return result;
 err_einval:
@@ -153,7 +281,7 @@ static struct moberg_status analog_out_write(
   }
 
   struct serial2002_data data = { is_channel, map.index, as_long };
-  struct moberg_status result = serial2002_write(device->port.fd,  data);
+  struct moberg_status result = serial2002_write(&device->port.io,  data, 1);
   if (OK(result) && actual_value) {
     *actual_value = data.value * map.delta + map.min;    
   }
@@ -170,25 +298,26 @@ static struct moberg_status digital_in_read(
   struct moberg_device_context *device = channel->device;
   struct serial2002_data data = { 0, 0 };
   struct digital_map map = device->digital_in.map[channel->index];
-  struct moberg_status result = serial2002_poll_digital(
-    device->port.fd, map.index);
-  if (! OK(result)) {
-    goto return_result;
-  }
-  result = serial2002_read(device->port.fd, device->port.timeout, &data);
-  if (OK(result)) {
+  struct moberg_status result;
+
+  if (device->batch.active) {
+    result = batch_sampling(device, NULL, &map, NULL, &data);
+    if (! OK(result)) { goto return_result; }
+  } else {
+    result = serial2002_poll_digital(&device->port.io, map.index, 1);
+    if (! OK(result)) { goto return_result; }
+    result = serial2002_read(&device->port.io, device->port.timeout, &data);
+    if (! OK(result)) { goto return_result; }
     if ((data.kind != is_digital) || (data.index != map.index)) {
       result = MOBERG_ERRNO(ECHRNG);
       goto return_result;
     }
-    *value = data.value != 0;
   }
+  *value = data.value != 0;
 return_result:
   return result;
 err_einval:
   return MOBERG_ERRNO(EINVAL);
-  *value = 1;
-  return MOBERG_OK;
 }
 
 static struct moberg_status digital_out_write(
@@ -200,7 +329,7 @@ static struct moberg_status digital_out_write(
   struct moberg_device_context *device = channel->device;
   struct digital_map map = device->digital_out.map[channel->index];
   struct serial2002_data data = { is_digital, map.index, desired_value != 0 };
-  struct moberg_status result = serial2002_write(device->port.fd,  data);
+  struct moberg_status result = serial2002_write(&device->port.io,  data, 0);
   if (OK(result) && actual_value) {
     *actual_value = data.value;
   }
@@ -217,19 +346,21 @@ static struct moberg_status encoder_in_read(
   struct moberg_device_context *device = channel->device;
   struct serial2002_data data;
   struct digital_map map = device->encoder_in.map[channel->index];
-  struct moberg_status result = serial2002_poll_channel(
-    device->port.fd, map.index);
-  if (! OK(result)) {
-    goto return_result;
-  }
-  result = serial2002_read(device->port.fd, device->port.timeout, &data);
-  if (OK(result)) {
+  struct moberg_status result;
+  if (device->batch.active) {
+    result = batch_sampling(device, NULL, NULL, &map, &data);
+    if (! OK(result)) { goto return_result; }
+  } else {
+    result = serial2002_poll_channel(&device->port.io, map.index, 0);
+    if (! OK(result)) { goto return_result; }
+    result = serial2002_read(&device->port.io, device->port.timeout, &data);
+    if (! OK(result)) { goto return_result; }
     if ((data.kind != is_channel) || (data.index != map.index)) {
       result = MOBERG_ERRNO(ECHRNG);
       goto return_result;
     }
-    *value = (data.value);
   }
+  *value = (data.value);
 return_result:
   return result;
 err_einval:
@@ -337,8 +468,12 @@ static struct moberg_status device_open(struct moberg_device_context *device)
       /* It's expected for this to fail for at least some USB serial adapters */
       ioctl(fd, TIOCSSERIAL, &settings);
     }
+    device->port.io.fd = fd;
+    device->port.io.read.pos = 0;
+    device->port.io.write.pos = 0;
     struct serial2002_config config;
-    result = serial2002_read_config(fd, device->port.timeout, &config);
+    result = serial2002_read_config(&device->port.io,
+                                    device->port.timeout, &config);
     if (! OK(result)) { goto err_result; }
     remap_analog(&device->analog_in, SERIAL2002_ANALOG_IN,
                   config.channel_in, 31);
@@ -350,7 +485,6 @@ static struct moberg_status device_open(struct moberg_device_context *device)
                   config.digital_out, 32);
     remap_digital(&device->encoder_in, SERIAL2002_COUNTER_IN,
                   config.channel_in, 31);
-    device->port.fd = fd;
   }
   device->port.count++;
   return MOBERG_OK;
@@ -368,7 +502,7 @@ static struct moberg_status device_close(struct moberg_device_context *device)
   if (device->port.count < 0) { errno = ENODEV; goto err_errno; }
   device->port.count--;
   if (device->port.count == 0) {
-    if (close(device->port.fd) < 0) { goto err_errno; }
+    if (close(device->port.io.fd) < 0) { goto err_errno; }
   }
   return MOBERG_OK;
 err_errno:
@@ -486,6 +620,9 @@ static struct moberg_status parse_config(
       } 
       if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
       device->port.timeout = timeout.u.integer.value * multiplier;
+    } else if (acceptkeyword(c, "batch_sampling")) {
+      device->batch.active = 1;
+      if (! acceptsym(c, tok_SEMICOLON, NULL)) { goto syntax_err; }
     } else {
       goto syntax_err;
     }

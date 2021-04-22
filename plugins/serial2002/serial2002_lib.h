@@ -49,17 +49,35 @@ struct serial2002_config {
     digital_in[32], digital_out[32];
 };
 
-struct moberg_status serial2002_poll_digital(int fd, int channel);
+struct serial2002_io {
+  int fd;
+  struct buffer {
+    unsigned char data[128];
+    int pos;
+    int count;
+  } read, write;
+};
 
-struct moberg_status serial2002_poll_channel(int fd, int channel);
+struct moberg_status serial2002_poll_digital(struct serial2002_io *io,
+                                             int channel,
+                                             int flush);
 
-struct moberg_status serial2002_read(int fd, long timeout,
+struct moberg_status serial2002_poll_channel(struct serial2002_io *io,
+                                             int channel,
+                                             int flush);
+
+struct moberg_status serial2002_read(struct serial2002_io *io,
+                                     long timeout,
                                      struct serial2002_data *data);
 
-struct moberg_status serial2002_write(int fd, struct serial2002_data data);
+struct moberg_status serial2002_write(struct serial2002_io *io,
+                                      struct serial2002_data data,
+                                      int flush);
 
-struct moberg_status serial2002_read_config(int fd,
+struct moberg_status serial2002_read_config(struct serial2002_io *io,
                                             long timeout,
                                             struct serial2002_config *config);
+
+struct moberg_status serial2002_flush(struct serial2002_io *io);
 
 #endif
