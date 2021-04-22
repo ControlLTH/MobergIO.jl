@@ -242,7 +242,7 @@ static struct moberg_status analog_in_read(
     result = batch_sampling(device, &map,  NULL, NULL, &data);
     if (! OK(result)) { goto return_result; }
   } else {
-    result = serial2002_poll_channel(&device->port.io, map.index, 0);
+    result = serial2002_poll_channel(&device->port.io, map.index, 1);
     if (! OK(result)) { goto return_result; }
     result = serial2002_read(&device->port.io, device->port.timeout, &data);
     if (! OK(result)) { goto return_result; }
@@ -351,7 +351,7 @@ static struct moberg_status encoder_in_read(
     result = batch_sampling(device, NULL, NULL, &map, &data);
     if (! OK(result)) { goto return_result; }
   } else {
-    result = serial2002_poll_channel(&device->port.io, map.index, 0);
+    result = serial2002_poll_channel(&device->port.io, map.index, 1);
     if (! OK(result)) { goto return_result; }
     result = serial2002_read(&device->port.io, device->port.timeout, &data);
     if (! OK(result)) { goto return_result; }
