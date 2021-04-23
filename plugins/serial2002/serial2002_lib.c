@@ -174,8 +174,8 @@ struct moberg_status serial2002_read(struct serial2002_io *io,
             value->kind = is_digital;
           } break;
           case 2:{
-            if (data == 0x5f) {
-              /* Ignore FTDI USB/serial event character (get bit 31) */
+            if (data == 0x5e) {
+              /* Ignore FTDI USB/serial event character (get bit 30) */
               value->kind = is_invalid;
               value->index = 0;
               value->value = 0;
