@@ -287,7 +287,10 @@ static void discard_pending(struct serial2002_io *io)
       break;
     } else {
       char discard;
-      read(io->fd, &discard, 1);
+      err = read(io->fd, &discard, 1);
+      if (err <= 0) {
+        break;
+      }
     }
   }
 }

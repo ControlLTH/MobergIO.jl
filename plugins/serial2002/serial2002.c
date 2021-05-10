@@ -451,6 +451,7 @@ static struct moberg_status device_open(struct moberg_device_context *device)
   if (device->port.count == 0) {
     fd = open(device->port.name, O_RDWR);
     if (fd < 0) { goto err_errno; }
+    if (lockf(fd, F_TLOCK, 0)) { goto err_errno; }
     struct termios2 termios2;
     if (ioctl(fd, TCGETS2, &termios2) < 0) { goto err_errno; }
     termios2.c_iflag = 0;
@@ -492,6 +493,7 @@ err_errno:
   result = MOBERG_ERRNO(errno);
 err_result:
   if (fd >= 0) {
+    lockf(fd, F_ULOCK, 0);
     close(fd);
   }
   return result;
@@ -502,6 +504,7 @@ static struct moberg_status device_close(struct moberg_device_context *device)
   if (device->port.count < 0) { errno = ENODEV; goto err_errno; }
   device->port.count--;
   if (device->port.count == 0) {
+    lockf(device->port.io.fd, F_ULOCK, 0);
     if (close(device->port.io.fd) < 0) { goto err_errno; }
   }
   return MOBERG_OK;
@@ -531,6 +534,9 @@ static int channel_down(struct moberg_channel *channel)
 static struct moberg_status channel_open(struct moberg_channel *channel)
 {
   struct moberg_status result = device_open(channel->context->device);
+  if (! OK(result)) {
+    goto return_result;
+  }
   int count = 0;
   switch (channel->kind) {
     case chan_ANALOGIN:
@@ -553,6 +559,7 @@ static struct moberg_status channel_open(struct moberg_channel *channel)
      device_close(channel->context->device);
      result = MOBERG_ERRNO(ENODEV);
   }
+return_result:
   return result;
 }
 
