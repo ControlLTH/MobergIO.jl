@@ -4,13 +4,10 @@ all: BUILD INSTALL
 
 .PHONY: BUILD 
 BUILD:
-	python2 ./setup.py build
 	python3 ./setup.py build
 
 .PHONY: INSTALL
 INSTALL:
-	MOBERG_VERSION=$(MOBERG_VERSION) python2 \
-		./setup.py install -O1 --prefix=/usr/ --root=./install
 	MOBERG_VERSION=$(MOBERG_VERSION) python3 \
 		./setup.py install -O1 --prefix=/usr/ --root=./install
 

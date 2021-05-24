@@ -735,25 +735,9 @@ static PyTypeObject MobergEncoderInType = {
  * Module initialization
  */
 
-#if PY_MAJOR_VERSION >= 3
-
-static PyModuleDef mobergmodule = {
-    PyModuleDef_HEAD_INIT,
-    .m_name = "moberg",
-    .m_doc = "Moberg I/O interface module.",
-    .m_size = -1,
-};
-
-#define INITERROR return NULL
-
-PyMODINIT_FUNC
-PyInit_moberg(void)
-#else
-
 #define INITERROR return
 
 PyMODINIT_FUNC initmoberg(void)
-#endif
 {
   PyObject *m;
   if (PyType_Ready(&MobergType) < 0 ||
@@ -765,12 +749,8 @@ PyMODINIT_FUNC initmoberg(void)
     INITERROR;
   }
 
-#if PY_MAJOR_VERSION >= 3
-  m = PyModule_Create(&mobergmodule);
-#else
   static PyMethodDef methods[] = { {NULL, NULL, 0, NULL} };
   m = Py_InitModule("moberg", methods);
-#endif
   if (m == NULL) {
     INITERROR;
   }
@@ -788,7 +768,4 @@ PyMODINIT_FUNC initmoberg(void)
   Py_INCREF(&MobergEncoderInType);
   PyModule_AddObject(m, "_EncoderIn", (PyObject *) &MobergEncoderInType);
 
-#if PY_MAJOR_VERSION >= 3
-  return m;
-#endif
 }

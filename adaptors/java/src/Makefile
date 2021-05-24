@@ -3,8 +3,6 @@ JARNAME=Moberg
 TARFILE=java_se.lth.control.realtime.Moberg-$(VERSION).tar.gz
 JNINAME=se_lth_control_realtime_moberg_Moberg
 
-JAVAH_PATH=$(shell javah -Xbootclasspath/p:build -version >/dev/null 2>&1 && \
-	echo -Xbootclasspath/p:build || echo -bootclasspath build)
 JNI_INCLUDE=/usr/lib/jvm/java/include/
 CC=gcc
 CC_JNI_FLAGS=-Wall -Werror -shared -fPIC \
@@ -44,7 +42,7 @@ JAVAC:	$(JAVAFILES:%.java=build/%.class)
 build/%.class:	src/%.java
 # Recompile all javafiles at once (do JIT compilation once)
 	mkdir -p build	
-	cd src ; javac -d ../build -target 1.5 -source 1.5 $(JAVAFILES)	
+	cd src ; javac -d ../build $(JAVAFILES)
 
 build/$(JARNAME).jar: JAVAC
 	jar -cf $@ \
@@ -53,7 +51,7 @@ build/$(JARNAME).jar: JAVAC
 
 build/%.h: $(shell echo $(JNINAME:%=build/%.class) | sed -e 's:_:/:g')
 # Too many dependencies, base the ones we need on $* (matches % above)	
-	javah -o $@ -force $(JAVAH_PATH) $(shell echo $* | sed -e s/_/./g) 
+	cd src ; javac -h ../$(dir $@) $(shell echo $* | sed -e 's|_|/|g').java 
 
 build/lib%.so: $(JNINAME:%=build/%.h) $(JNINAME:%=src/%.c)
 # Too many dependencies, base the ones we need on $* (matches % above)	
