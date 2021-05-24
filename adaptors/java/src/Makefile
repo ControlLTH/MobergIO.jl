@@ -51,7 +51,8 @@ build/$(JARNAME).jar: JAVAC
 
 build/%.h: $(shell echo $(JNINAME:%=build/%.class) | sed -e 's:_:/:g')
 # Too many dependencies, base the ones we need on $* (matches % above)	
-	cd src ; javac -h ../$(dir $@) $(shell echo $* | sed -e 's|_|/|g').java 
+	cd src ; javac -h ../$(dir $@) -d ../build \
+		       $(shell echo $* | sed -e 's|_|/|g').java 
 
 build/lib%.so: $(JNINAME:%=build/%.h) $(JNINAME:%=src/%.c)
 # Too many dependencies, base the ones we need on $* (matches % above)	
