@@ -16,7 +16,7 @@ build:
 	mkdir -p $@
 
 clean:
-	rm -f build/*
+	rm -rf build
 
 build/comedi.c: ../../moberg.h
 build/comedi.o: ../../moberg_config.h

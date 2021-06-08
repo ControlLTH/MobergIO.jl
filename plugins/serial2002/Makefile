@@ -16,7 +16,7 @@ build:
 	mkdir -p $@
 
 clean:
-	rm -f build/*
+	rm -rf build
 
 build/serial2002.o: ../../moberg_module.h
 build/serial2002.o: serial2002_lib.h

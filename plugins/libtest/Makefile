@@ -16,6 +16,6 @@ build:
 	mkdir -p $@
 
 clean:
-	rm -f build/*
+	rm -rf build
 
 build/libtest.o: ../../moberg_module.h

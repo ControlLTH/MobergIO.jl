@@ -62,9 +62,7 @@ test: all
 	$(MAKE) -C test test
 
 clean:
-	rm -f build/*.so
-	rm -f build/*.mex*
-	rm -f build/lib/*.o
+	rm -rf build/
 	rm -f *~
 	rm -f moberg-*.spec
 	rm -f moberg-*.tar.gz
