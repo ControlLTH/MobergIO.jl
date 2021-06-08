@@ -3,7 +3,10 @@ JARNAME=Moberg
 TARFILE=java_se.lth.control.realtime.Moberg-$(VERSION).tar.gz
 JNINAME=se_lth_control_realtime_moberg_Moberg
 
-JNI_INCLUDE=/usr/lib/jvm/java/include/
+JAVA_HOME=$(shell realpath $$(which javac) | sed 's|/bin/javac||')
+JNI_INCLUDE=$(JAVA_HOME)/include/
+
+JNI_INCLUDE=$(JAVA_HOME)/include/
 CC=gcc
 CC_JNI_FLAGS=-Wall -Werror -shared -fPIC \
 	     -I$(JNI_INCLUDE) -I$(JNI_INCLUDE)/linux \

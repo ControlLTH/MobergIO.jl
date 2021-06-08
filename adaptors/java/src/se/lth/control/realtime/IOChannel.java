@@ -25,7 +25,8 @@ import java.util.BitSet;
 
 public abstract class IOChannel {
 
-  private static HashMap allocations = new HashMap();
+  private static class AllocationMap extends HashMap<String, BitSet> {}
+  private static AllocationMap allocations = new AllocationMap();
 
   public final int index;
   private BitSet allocation;
