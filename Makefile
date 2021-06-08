@@ -2,8 +2,8 @@ LIBRARIES=libmoberg.so
 MOBERG_VERSION=$(shell git describe --tags | sed -e 's/^v//;s/-/./g' )
 CCFLAGS+=-Wall -Werror -I$(shell pwd) -O3 -g
 LDFLAGS+=-L$(shell pwd)/build/ -lmoberg
-PLUGINS:=$(wildcard plugins/*)
-ADAPTORS:=$(wildcard adaptors/*)
+PLUGINS:=$(sort $(wildcard plugins/*))
+ADAPTORS:=$(sort $(wildcard adaptors/*))
 export CCFLAGS LDFLAGS
 LDFLAGS_parse_config=-ldl
 #-export-dynamic
