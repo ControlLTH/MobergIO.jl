@@ -1,18 +1,13 @@
-mutable struct DigitalInChannel
-    context::Ptr{Nothing}
-    read::Ptr{Nothing}
-end
-
-mutable struct DigitalIn
+mutable struct DigitalIn <: AbstractMobergIn
     moberg::Ptr{Nothing}
     index::UInt32
-    channel::DigitalInChannel
+    channel::MobergInChannel
     function DigitalIn(moberg::Moberg, index::Unsigned)
-        channel = DigitalInChannel(0,0)
+        channel = MobergInChannel(0,0)
         moberg_handle = moberg.handle
         checkOK(ccall((:moberg_digital_in_open, "libmoberg"),
                        Status,
-                       (Ptr{Nothing}, Cint, Ref{DigitalInChannel}),
+                       (Ptr{Nothing}, Cint, Ref{MobergInChannel}),
                        moberg_handle, index, channel));
         self = new(moberg_handle, index, channel)
         finalizer(close, self)
@@ -24,7 +19,7 @@ function close(din::DigitalIn)
     DEBUG && println("closing $(din)")
     checkOK(ccall((:moberg_digital_in_close, "libmoberg"),
                   Status,
-                  (Ptr{Nothing}, Cint, DigitalInChannel),
+                  (Ptr{Nothing}, Cint, MobergInChannel),
                   din.moberg, din.index, din.channel))
 end
 

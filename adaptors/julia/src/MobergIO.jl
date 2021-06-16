@@ -1,5 +1,25 @@
 module MobergIO
 
+export Moberg
+
+import Base: close, read, write
+
+abstract type AbstractMobergIO end
+abstract type AbstractMobergIn <: AbstractMobergIO end
+abstract type AbstractMobergOut <: AbstractMobergIO end
+
+"""
+    close(io::AbstractMobergIO)
+""" close
+
+"""
+    result = read(io::AbstractMobergIn)
+""" read
+
+"""
+    write(io::AbstractMobergIn)
+""" write
+
 const DEBUG = false
 
 struct Status
@@ -10,6 +30,16 @@ function checkOK(status::Status)
     if status.result != 0
         error("Moberg call failed with errno $(status.result)")
     end
+end
+
+mutable struct MobergOutChannel
+    context::Ptr{Nothing}
+    write::Ptr{Nothing}
+end
+
+mutable struct MobergInChannel
+    context::Ptr{Nothing}
+    read::Ptr{Nothing}
 end
 
 mutable struct Moberg

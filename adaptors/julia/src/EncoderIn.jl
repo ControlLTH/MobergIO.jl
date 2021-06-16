@@ -1,18 +1,21 @@
-mutable struct EncoderInChannel
-    context::Ptr{Nothing}
-    read::Ptr{Nothing}
-end
+"""
+    encoder_in = EncoderIn(moberg::Moberg, index::Unsigned)
 
-mutable struct EncoderIn
+Example usage:
+
+    encoder_in = EncoderIn(m, UInt32(40))
+    result = read(encoder_in)
+"""
+mutable struct EncoderIn <: AbstractMobergIn
     moberg::Ptr{Nothing}
     index::UInt32
-    channel::EncoderInChannel
+    channel::MobergInChannel
     function EncoderIn(moberg::Moberg, index::Unsigned)
-        channel = EncoderInChannel(0,0)
+        channel = MobergInChannel(0,0)
         moberg_handle = moberg.handle
         checkOK(ccall((:moberg_encoder_in_open, "libmoberg"),
                        Status,
-                       (Ptr{Nothing}, Cint, Ref{EncoderInChannel}),
+                       (Ptr{Nothing}, Cint, Ref{MobergInChannel}),
                        moberg_handle, index, channel))
         self = new(moberg_handle, index, channel)
         finalizer(close, self)
@@ -24,7 +27,7 @@ function close(ein::EncoderIn)
     DEBUG && println("closing $(ein)")
     checkOK(ccall((:moberg_encoder_in_close, "libmoberg"),
                   Status,
-                  (Ptr{Nothing}, Cint, EncoderInChannel),
+                  (Ptr{Nothing}, Cint, MobergInChannel),
                   ein.moberg, ein.index, ein.channel))
 end
 
