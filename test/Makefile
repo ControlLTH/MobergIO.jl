@@ -9,8 +9,8 @@ ENV_TEST = LD_LIBRARY_PATH=../build \
 	   JULIA_LOAD_PATH=../adaptors/julia
 LDFLAGS_test_moberg4simulink = -lmoberg4simulink
 CCFLAGS_test_moberg4simulink = -I../adaptors/matlab -Wall -Werror -I$(shell pwd) -g
-PYTHON2PATH=$(shell realpath ../adaptors/python/install/usr/lib*/python2*/site-packages)
-PYTHON3PATH=$(shell realpath ../adaptors/python/install/usr/lib*/python3*/site-packages)
+PYTHON2PATH=$(shell realpath ../adaptors/python2/install/usr/lib*/python2*/site-packages)
+PYTHON3PATH=$(shell realpath ../adaptors/python3/install/usr/lib*/python3*/site-packages)
 all:
 
 .PHONY: test
@@ -34,7 +34,7 @@ run_jl_%: %.jl
 .PRECIOUS: build/%
 
 build/%: %.c | build
-	$(CC) $(CCFLAGS) $(CCFLAGS_$*) $(LDFLAGS) $(LDFLAGS_$*) -o $@ $<
+	$(CC) $(CCFLAGS) $(CCFLAGS_$*) -o $@ $< $(LDFLAGS) $(LDFLAGS_$*)
 
 build:
 	mkdir build

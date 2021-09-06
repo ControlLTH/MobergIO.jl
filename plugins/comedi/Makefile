@@ -6,7 +6,7 @@ LDFLAGS_comedi=-shared -fPIC -L../../build -lmoberg -lcomedi -lm
 all:	$(LIBRARIES:%=build/%)
 
 build/libmoberg_%.so: build/%.o Makefile | build
-	$(CC) $(LDFLAGS) $(LDFLAGS_$(*)) -o $@ $(filter %.o,$^)
+	$(CC) -o $@ $(filter %.o,$^) $(LDFLAGS) $(LDFLAGS_$(*))
 
 .PRECIOUS: build/%.o
 build/%.o:      %.c Makefile | build

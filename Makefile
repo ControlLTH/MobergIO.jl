@@ -23,7 +23,7 @@ build/lib build:
 	mkdir -p $@
 
 %:	build/%.o Makefile
-	$(CC) $(LDFLAGS) $(LDFLAGS_$(*)) -o $@  $(filter %.o,$^)
+	$(CC) -o $@  $(filter %.o,$^) $(LDFLAGS) $(LDFLAGS_$(*))
 
 build/%.o:	%.c Makefile
 	$(CC) $(CCFLAGS) -c -o $@ $<
