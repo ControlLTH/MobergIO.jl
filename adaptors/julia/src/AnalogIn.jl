@@ -1,18 +1,13 @@
-mutable struct AnalogInChannel
-    context::Ptr{Nothing}
-    read::Ptr{Nothing}
-end
-
-mutable struct AnalogIn
+mutable struct AnalogIn <: AbstractMobergIn
     moberg::Ptr{Nothing}
     index::UInt32
-    channel::AnalogInChannel
+    channel::MobergInChannel
     function AnalogIn(moberg::Moberg, index::Unsigned)
-        channel = AnalogInChannel(0,0)
+        channel = MobergInChannel(0,0)
         moberg_handle = moberg.handle
         checkOK(ccall((:moberg_analog_in_open, "libmoberg"),
                        Status,
-                       (Ptr{Nothing}, Cint, Ref{AnalogInChannel}),
+                       (Ptr{Nothing}, Cint, Ref{MobergInChannel}),
                        moberg_handle, index, channel))
         self = new(moberg_handle, index, channel)
         finalizer(close, self)
@@ -24,7 +19,7 @@ function close(ain::AnalogIn)
     DEBUG && println("closing $(ain)")
     checkOK(ccall((:moberg_analog_in_close, "libmoberg"),
                   Status,
-                  (Ptr{Nothing}, Cint, AnalogInChannel),
+                  (Ptr{Nothing}, Cint, MobergInChannel),
                   ain.moberg, ain.index, ain.channel))
 end
 

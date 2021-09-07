@@ -139,10 +139,8 @@ cp adaptors/matlab/Makefile.mex ${RPM_BUILD_ROOT}/opt/matlab/src/moberg/Makefile
 
 # Julia
 mkdir -p ${RPM_BUILD_ROOT}/opt/julia/local/packages/MobergIO/src
-cp adaptors/julia/*.jl ${RPM_BUILD_ROOT}/opt/julia/local/packages/MobergIO/src
-cat adaptors/julia/Project.toml.template \
-| sed -e 's/<<<VERSION>>>/%{version}/' \
-> ${RPM_BUILD_ROOT}/opt/julia/local/packages/MobergIO/Project.toml
+cp adaptors/julia/src/*.jl ${RPM_BUILD_ROOT}/opt/julia/local/packages/MobergIO/src
+cp adaptors/julia/Project.toml ${RPM_BUILD_ROOT}/opt/julia/local/packages/MobergIO/Project.toml
 (
   cd ${RPM_BUILD_ROOT}/opt/julia/local/packages/MobergIO
   git init

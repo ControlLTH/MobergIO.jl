@@ -1,18 +1,13 @@
-mutable struct DigitalOutChannel
-    context::Ptr{Nothing}
-    write::Ptr{Nothing}
-end
-
-mutable struct DigitalOut
+mutable struct DigitalOut <: AbstractMobergOut
     moberg::Ptr{Nothing}
     index::UInt32
-    channel::DigitalOutChannel
+    channel::MobergOutChannel
     function DigitalOut(moberg::Moberg, index::Unsigned)
-        channel = DigitalOutChannel(0,0)
+        channel = MobergOutChannel(0,0)
         moberg_handle = moberg.handle
         checkOK(ccall((:moberg_digital_out_open, "libmoberg"),
                        Status,
-                       (Ptr{Nothing}, Cint, Ref{DigitalOutChannel}),
+                       (Ptr{Nothing}, Cint, Ref{MobergOutChannel}),
                        moberg_handle, index, channel))
         self = new(moberg_handle, index, channel)
         finalizer(close, self)
@@ -24,7 +19,7 @@ function close(dout::DigitalOut)
     DEBUG && println("closing $(dout)")
     checkOK(ccall((:moberg_digital_out_close, "libmoberg"),
                   Status,
-                  (Ptr{Nothing}, Cint, DigitalOutChannel),
+                  (Ptr{Nothing}, Cint, MobergOutChannel),
                   dout.moberg, dout.index, dout.channel))
 end
 
