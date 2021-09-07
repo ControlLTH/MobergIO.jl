@@ -127,11 +127,15 @@ cp adaptors/matlab/Makefile.mex ${RPM_BUILD_ROOT}/opt/matlab/src/moberg/Makefile
 
 # Python
 (
-    cd adaptors/python
+    cd adaptors/python2
     export MOBERG_VERSION=%{version}
     %{__python2} setup.py install -O1 \
         --root=$RPM_BUILD_ROOT --prefix /usr \
         --record=INSTALLED_python2
+)
+(
+    cd adaptors/python3
+    export MOBERG_VERSION=%{version}
     %{__python3} setup.py install -O1 \
         --root=$RPM_BUILD_ROOT --prefix /usr \
         --record=INSTALLED_python3
@@ -201,10 +205,10 @@ EOF
 /opt/matlab/src/moberg/*
 %{_includedir}/moberg4simulink.h
 
-%files python2 -f adaptors/python/INSTALLED_python2
+%files python2 -f adaptors/python2/INSTALLED_python2
 %defattr(-,root,root,-)
 
-%files python%{python3_pkgversion} -f adaptors/python/INSTALLED_python3
+%files python%{python3_pkgversion} -f adaptors/python3/INSTALLED_python3
 %defattr(-,root,root,-)
 
 %files julia
